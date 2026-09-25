@@ -101,12 +101,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Start the stack
-        run: docker compose up --detach --build --wait --wait-timeout 180
-
-      - name: Apply migrations
-        run: docker compose exec -T backend alembic upgrade head
-
+      # Install host dependencies BEFORE starting Docker Compose. Otherwise the
+      # container's node_modules volume creates a root-owned frontend/node_modules
+      # folder on the host and npm ci fails with EACCES.
       - uses: actions/setup-node@v7
         with:
           node-version-file: frontend/.nvmrc
@@ -118,6 +115,12 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+
+      - name: Start the stack
+        run: docker compose up --detach --build --wait --wait-timeout 180
+
+      - name: Apply migrations
+        run: docker compose exec -T backend alembic upgrade head
 
       - name: Run Playwright
         working-directory: frontend

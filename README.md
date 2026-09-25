@@ -162,10 +162,19 @@ docker compose exec frontend npm run typecheck
 docker compose exec frontend npm test
 docker compose exec frontend npm run build
 
-# End-to-end smoke test (run on your machine while the stack is up)
+```
+
+### End-to-end tests
+
+Playwright runs on your machine against the running stack. Install the frontend dependencies on your machine **before** the first `docker compose up`. If you don't, the container's `node_modules` volume can create an empty, root-owned `frontend/node_modules` folder that blocks `npm ci`.
+
+```bash
 cd frontend
 npm ci
 npx playwright install chromium
+cd ..
+docker compose up --build -d
+cd frontend
 npm run test:e2e
 ```
 
