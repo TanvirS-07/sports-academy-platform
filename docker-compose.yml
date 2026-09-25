@@ -1,0 +1,76 @@
+# Local development stack: PostgreSQL + FastAPI + Vite.
+#
+#   docker compose up --build        start everything
+#   docker compose down              stop (data is kept in the pgdata volume)
+#   docker compose down -v           stop and delete the database volume
+#
+# Values come from .env when present (copy .env.example), otherwise the defaults below.
+
+name: sports-academy
+
+services:
+  db:
+    image: postgres:17.11-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-academy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-academy_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-academy}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Runs once, on first start with an empty volume: creates academy_test.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-academy}:${POSTGRES_PASSWORD:-academy_dev_password}@db:5432/${POSTGRES_DB:-academy}
+      TEST_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-academy}:${POSTGRES_PASSWORD:-academy_dev_password}@db:5432/academy_test
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      WATCHFILES_FORCE_POLLING: ${WATCH_POLLING:-false}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      API_PROXY_TARGET: http://backend:8000
+      WATCH_POLLING: ${WATCH_POLLING:-false}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      # Keep the container's node_modules instead of the (possibly Windows) host folder.
+      - /app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5173').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  pgdata:
