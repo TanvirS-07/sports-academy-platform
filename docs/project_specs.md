@@ -8,7 +8,7 @@ The initial implementation will focus on a cricket academy, while the underlying
 
 The platform will replace repetitive manual processes with a centralised system for managing training programs, sessions, bookings, attendance, player development, and payments.
 
-The system will use a coach-led management model. There will be no central Academy Administrator role in the initial scope.
+The system uses a coach-led management model. Coaches manage their own programs, sessions and enrolled players. The platform has three roles: Coach, Parent and Player.
 
 ---
 
@@ -21,8 +21,9 @@ Coaches are responsible for managing the training sessions and programs they ope
 Coaches will be able to:
 
 * Create training programs
+* Enrol players into their programs
 * Create and manage their own sessions
-* Set session capacity
+* Set session capacity (the number of available places)
 * View available and occupied places
 * View players booked into their sessions
 * Manage session bookings where appropriate
@@ -52,6 +53,8 @@ Parents will be able to:
 
 ### 2.3 Players
 
+A Player is initially a profile created and managed by a Parent. A Player does not need their own login. A Player may be given a login later, which allows them to view their own information directly.
+
 Players will have access to information relating to their own participation and development.
 
 Players will be able to:
@@ -77,7 +80,7 @@ The platform will aim to:
 * Track player attendance
 * Track player development
 * Provide coaches with relevant player information
-* Manage payments and invoices
+* Manage payments and invoices (after the MVP)
 * Provide users with role-appropriate access to information
 
 ---
@@ -95,6 +98,17 @@ The system will provide:
 * Protected API endpoints
 * Session/token management
 
+Account creation rules:
+
+* Public registration creates **Parent** accounts only.
+* **Coach** accounts are created through a development CLI/seed script for the MVP.
+* **Player** logins are optional and are enabled later by the Player's Parent.
+
+Token management is delivered in two steps:
+
+* Phase 2: short-lived JWT access tokens.
+* Phase 2b: refresh tokens with rotation and revocation.
+
 ---
 
 ### 4.2 User Management
@@ -103,8 +117,10 @@ The system will support:
 
 * Coach accounts
 * Parent accounts
-* Player profiles
+* Player profiles (created and managed by Parents)
+* Optional Player logins
 * Parent-player relationships
+* Program-player enrolments
 * Role-based access control
 
 Users should only be able to access information they are authorised to view.
@@ -131,6 +147,27 @@ Program: U14 Cricket Development
 Age Group: Under 14
 Coach: Coach A
 ```
+
+#### Program enrolment
+
+The relationship between a player and a program is explicit. The coach who owns a program enrols players into it:
+
+```text
+Coach
+  ↓
+Program
+  ↓
+Enrols Player
+  ↓
+Player can book sessions belonging to that program
+```
+
+Enrolment is stored separately from bookings:
+
+* **Enrolment** (program ↔ player) is the lasting relationship. It determines which players a coach manages.
+* **Booking** (session ↔ player) represents participation in one specific training session.
+
+Parent enrolment requests are not part of the MVP and may be added later if the academy needs them.
 
 ---
 
@@ -162,7 +199,7 @@ Capacity: 15
 
 ### 4.5 Session Capacity and Bookings
 
-Each session will have a defined capacity.
+Each session will have a defined capacity. For now, "session availability" means the number of available places in a session (capacity minus confirmed bookings). A separate coach availability calendar is out of scope.
 
 The system will track:
 
@@ -172,11 +209,12 @@ Booked: 11
 Available: 4
 ```
 
-Parents will be able to book available places for their children.
+Parents will be able to book available places for their children in sessions that belong to a program their child is enrolled in.
 
 The system must prevent:
 
 * Duplicate bookings
+* Booking a session for a player who is not enrolled in that session's program
 * Booking when a session is full
 * Invalid bookings
 * Unauthorised users accessing bookings
@@ -218,7 +256,7 @@ Parents and players will only be able to view development information they are a
 
 ### 4.8 Payments
 
-Payment functionality is planned but may be implemented after the core platform.
+Payment functionality is planned for after the MVP. It is not part of the initial core system, and the core tables will not contain payment fields.
 
 Potential functionality includes:
 
@@ -244,9 +282,10 @@ For example:
 
 * A coach can manage their own sessions.
 * A coach can manage capacity for their own sessions.
-* A coach can view players associated with their sessions.
+* A coach can enrol players into their own programs.
+* A coach can view players enrolled in their programs.
 * A coach can record attendance for their sessions.
-* A coach can add development notes for players they coach.
+* A coach can add development notes for players enrolled in their programs.
 
 ### Parent
 
@@ -254,7 +293,7 @@ A parent should only be able to:
 
 * View their own account
 * View their children
-* Book sessions for their children
+* Book sessions for their children, in programs their children are enrolled in
 * View their children's attendance
 * View their children's development information
 * View their own payment information
@@ -278,6 +317,8 @@ Examples include:
 * A player cannot have duplicate bookings for the same session.
 * A session cannot exceed its capacity.
 * A parent cannot book a session for a player they do not manage.
+* A player can only be booked into sessions that belong to a program they are actively enrolled in.
+* A player cannot be enrolled in the same program twice.
 * A coach cannot modify another coach's session.
 * A coach cannot record attendance for a session they are not authorised to manage.
 * Users cannot access another user's private information.
@@ -297,13 +338,16 @@ The initial MVP should focus on the core academy workflow:
 3. Parent and player profiles
 4. Coach profiles
 5. Training programs
-6. Training sessions
-7. Session capacity
-8. Session bookings
-9. Attendance
-10. Basic player development notes
+6. Program enrolment
+7. Training sessions
+8. Session capacity
+9. Session bookings
+10. Attendance
+11. Basic player development notes
 
-Payments and more advanced functionality can be implemented after the core workflow is stable.
+Payments are not part of the MVP. They and other advanced functionality will be implemented after the core workflow is stable.
+
+The database schema is built incrementally: each table is created by a migration in the phase that implements the feature that needs it.
 
 ---
 
@@ -448,11 +492,18 @@ The frontend will consume the backend through REST APIs and will not directly ac
 ### Phase 2 — Authentication
 
 * User model
-* Registration
+* Parent registration
 * Login
 * Password hashing
-* JWT authentication
+* JWT access-token authentication
 * Role-based authorisation
+* Coach creation CLI/seed script
+
+### Phase 2b — Refresh Tokens
+
+* Refresh tokens
+* Token rotation
+* Token revocation (logout)
 
 ### Phase 3 — Core Academy Management
 
@@ -461,6 +512,7 @@ The frontend will consume the backend through REST APIs and will not directly ac
 * Players
 * Parent-player relationships
 * Training programs
+* Program enrolment (program_players)
 
 ### Phase 4 — Sessions and Bookings
 
