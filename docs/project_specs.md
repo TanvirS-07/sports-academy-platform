@@ -1,130 +1,81 @@
-# Sports Academy Management Platform
+# Sports Academy Management Platform: Project Specification
+
+This document describes what the platform should do. Most of it is planned work. The foundation is being built in Phase 1, and the features below are added in later phases (see [section 12](#12-development-phases)).
 
 ## 1. Overview
 
-The Sports Academy Management Platform is a full-stack web application designed to centralise the management of sports academy operations.
+The platform is a web app for managing a sports academy's training programs, sessions, bookings, attendance and player development. The first version is for a cricket academy, but nothing in the design should assume cricket.
 
-The initial implementation will focus on a cricket academy, while the underlying system will be designed so that it can be adapted to other sports academies with similar operational requirements.
+The system is coach-led. Coaches manage their own programs, sessions and enrolled players. There are three roles: **Coach**, **Parent** and **Player**.
 
-The platform will replace repetitive manual processes with a centralised system for managing training programs, sessions, bookings, attendance, player development, and payments.
-
-The system will use a coach-led management model. There will be no central Academy Administrator role in the initial scope.
-
----
-
-## 2. Target Users
+## 2. Users
 
 ### 2.1 Coaches
 
-Coaches are responsible for managing the training sessions and programs they operate.
-
 Coaches will be able to:
 
-* Create training programs
-* Create and manage their own sessions
-* Set session capacity
-* View available and occupied places
-* View players booked into their sessions
-* Manage session bookings where appropriate
-* Record attendance
-* Add player development notes
-* Track player progress
-* View relevant payment information if payments are implemented
-
----
+* create training programs
+* enrol players into their programs
+* create and manage their own sessions
+* set session capacity and see how many places are booked and available
+* see which players are booked into their sessions
+* manage bookings for their sessions where needed
+* record attendance
+* add development notes and track player progress
+* see payment information for their sessions (after the MVP)
 
 ### 2.2 Parents
 
-Parents are responsible for managing their children's participation in the academy.
-
 Parents will be able to:
 
-* Manage their children's profiles
-* View available sessions
-* View session capacity and available places
-* Book sessions for their children
-* View upcoming sessions
-* View attendance records
-* View player development information
-* View invoices and payment status
-
----
+* manage their children's profiles
+* view sessions and how many places are available
+* book their children into sessions
+* view upcoming sessions, attendance and development information
+* view invoices and payment status (after the MVP)
 
 ### 2.3 Players
 
-Players will have access to information relating to their own participation and development.
+A player starts as a profile that a parent creates and manages, and doesn't need a login. A player can be given a login later so they can see their own information.
 
-Players will be able to:
+Players will be able to view their training schedule, upcoming sessions, attendance, development information and progress.
 
-* View their training schedule
-* View upcoming sessions
-* View attendance records
-* View development information
-* Track their progress
+## 3. Goals
 
----
+* Replace manual tracking of sessions, bookings and attendance
+* Manage session capacity and prevent overbooking
+* Let parents book available places for their children
+* Track attendance and player development
+* Show each user only the information their role allows
+* Add payments and invoices after the MVP
 
-## 3. Core Goals
-
-The platform will aim to:
-
-* Centralise academy operations
-* Reduce repetitive manual administrative processes
-* Simplify training session scheduling
-* Manage session capacity and available places
-* Allow parents to book available sessions
-* Prevent overbooking
-* Track player attendance
-* Track player development
-* Provide coaches with relevant player information
-* Manage payments and invoices
-* Provide users with role-appropriate access to information
-
----
-
-## 4. Core Features
+## 4. Features
 
 ### 4.1 Authentication
 
-The system will provide:
+* Registration and login
+* Password hashing
+* JWT authentication
+* Role-based authorisation on protected endpoints
 
-* User registration/login
-* Secure password handling
-* JWT-based authentication
-* Role-based authorisation
-* Protected API endpoints
-* Session/token management
+Account rules:
 
----
+* Public registration only creates **Parent** accounts.
+* **Coach** accounts are created with a development CLI/seed script for the MVP.
+* **Player** logins are optional and are enabled later by the player's parent.
 
-### 4.2 User Management
+Tokens are added in two steps:
 
-The system will support:
+* **Phase 2:** short-lived JWT access tokens.
+* **Phase 2b:** refresh tokens with rotation and revocation.
 
-* Coach accounts
-* Parent accounts
-* Player profiles
-* Parent-player relationships
-* Role-based access control
+### 4.2 User management
 
-Users should only be able to access information they are authorised to view.
+The system will support coach accounts, parent accounts, player profiles (with optional logins), parent–player relationships and program enrolments. Users can only access information they're allowed to see.
 
----
+### 4.3 Training programs
 
-### 4.3 Training Programs
-
-Coaches will be able to create and manage training programs.
-
-A program may contain information such as:
-
-* Program name
-* Sport
-* Age group
-* Description
-* Training objectives
-* Assigned coach
-
-Example:
+A coach creates programs. A program has a name, sport, age group, description, training objectives and a coach.
 
 ```text
 Program: U14 Cricket Development
@@ -132,378 +83,168 @@ Age Group: Under 14
 Coach: Coach A
 ```
 
----
+#### Program enrolment
 
-### 4.4 Training Sessions
+A player is linked to a program through an enrolment, which the program's coach creates:
 
-Coaches will be able to create sessions associated with their programs.
+```text
+Coach → Program → enrols Player → Player can book sessions in that program
+```
 
-A session may contain:
+Enrolments and bookings are stored separately:
 
-* Date
-* Start time
-* End time
-* Location
-* Capacity
-* Assigned coach
-* Training program
-* Session status
+* An **enrolment** (program ↔ player) is the lasting relationship. It decides which players a coach manages.
+* A **booking** (session ↔ player) means the player is attending one specific session.
 
-Example:
+Parent enrolment requests are not part of the MVP and can be added later if the academy needs them.
+
+### 4.4 Training sessions
+
+Coaches create sessions for their programs. A session has a date, start time, end time, location, session capacity, coach, program and status.
 
 ```text
 U14 Cricket Development
-Saturday
-10:00 AM – 11:30 AM
-Capacity: 15
+Saturday, 10:00 AM – 11:30 AM
+capacity = 15
 ```
 
----
+### 4.5 Session capacity and bookings
 
-### 4.5 Session Capacity and Bookings
-
-Each session will have a defined capacity.
-
-The system will track:
+Session capacity is the number of players a session can accept. The system shows how many places are booked and how many are left:
 
 ```text
-Capacity: 15
-Booked: 11
-Available: 4
+capacity  = 15
+booked    = 11
+available = 4
 ```
 
-Parents will be able to book available places for their children.
+There is no separate coach availability calendar. "Available" always means places left in a session.
 
-The system must prevent:
+Parents can book available places for their children in sessions that belong to a program the child is enrolled in. The backend must reject:
 
-* Duplicate bookings
-* Booking when a session is full
-* Invalid bookings
-* Unauthorised users accessing bookings
+* duplicate bookings
+* bookings for a player who isn't enrolled in the session's program
+* bookings when the session is full
+* other invalid bookings, and access by users who aren't allowed to see them
 
-The backend must also handle concurrent booking attempts so that the available capacity cannot be exceeded.
-
----
+It must also handle two people booking at the same time, so session capacity is never exceeded.
 
 ### 4.6 Attendance
 
-Coaches will be able to record attendance for players participating in their sessions.
+Coaches record attendance for players in their sessions as **Present**, **Absent** or **Excused**. Each record belongs to one player and one session.
 
-Attendance may include:
+### 4.7 Player development
 
-* Present
-* Absent
-* Excused
+Coaches record development notes for players. A note can include skills being worked on, areas for improvement, progress observations, the date and the coach who wrote it. Parents and players can only see notes they're allowed to access.
 
-The system will store attendance against the relevant player and session.
+### 4.8 Payments (after the MVP)
 
----
+Invoices, payment status, pricing and payment history are planned for after the MVP. Payments will be a separate feature, and the core tables won't include payment fields, so they don't complicate the booking system.
 
-### 4.7 Player Development
+## 5. Authorisation rules
 
-Coaches will be able to record development information for players.
+The backend enforces these rules. The frontend doesn't decide what a user can access.
 
-Development records may include:
+**Coach**
 
-* Development notes
-* Skills being worked on
-* Areas for improvement
-* Progress observations
-* Date of observation
-* Coach who recorded the observation
+* Manages their own programs and sessions, including session capacity
+* Enrols players into their own programs
+* Sees players enrolled in their programs
+* Records attendance for their own sessions
+* Adds development notes for players in their programs
 
-Parents and players will only be able to view development information they are authorised to access.
+**Parent**
 
----
+* Sees their own account and their children
+* Books sessions for their children, in programs the child is enrolled in
+* Sees their children's attendance and development information
+* Sees their own payment information (after the MVP)
 
-### 4.8 Payments
+**Player**
 
-Payment functionality is planned but may be implemented after the core platform.
+* Sees their own schedule, attendance and development information
 
-Potential functionality includes:
+## 6. Business rules
 
-* Invoices
-* Payment status
-* Session/program pricing
-* Payment history
-* Parent payment records
+These are enforced by the backend, and by database constraints where possible:
 
-Payment processing will be treated as a separate feature so that it does not unnecessarily complicate the initial MVP.
+* A player can't be booked into the same session twice.
+* A session can't go over its session capacity.
+* Session capacity can't be negative.
+* A cancelled booking frees up its place.
+* A parent can't book for a player they don't manage.
+* A player can only be booked into sessions from a program they're actively enrolled in.
+* A player can't be enrolled in the same program twice.
+* A coach can't change another coach's session or record attendance for it.
+* Users can't see other users' private information.
+* A session must have a valid date and time, and its end time must be after its start time.
 
----
-
-## 5. Authorisation Rules
-
-The system must enforce role-based access.
-
-### Coach
-
-A coach should only be able to modify resources they are authorised to manage.
-
-For example:
-
-* A coach can manage their own sessions.
-* A coach can manage capacity for their own sessions.
-* A coach can view players associated with their sessions.
-* A coach can record attendance for their sessions.
-* A coach can add development notes for players they coach.
-
-### Parent
-
-A parent should only be able to:
-
-* View their own account
-* View their children
-* Book sessions for their children
-* View their children's attendance
-* View their children's development information
-* View their own payment information
-
-### Player
-
-A player should only be able to:
-
-* View their own schedule
-* View their own attendance
-* View their own development information
-
----
-
-## 6. Important Business Rules
-
-The backend should enforce business rules rather than relying solely on frontend validation.
-
-Examples include:
-
-* A player cannot have duplicate bookings for the same session.
-* A session cannot exceed its capacity.
-* A parent cannot book a session for a player they do not manage.
-* A coach cannot modify another coach's session.
-* A coach cannot record attendance for a session they are not authorised to manage.
-* Users cannot access another user's private information.
-* A cancelled booking should free the relevant session place.
-* Session capacity cannot be negative.
-* A session must have a valid date and time.
-* A session's end time must occur after its start time.
-
----
-
-## 7. Initial MVP
-
-The initial MVP should focus on the core academy workflow:
+## 7. MVP scope
 
 1. User authentication
 2. Role-based access
 3. Parent and player profiles
 4. Coach profiles
 5. Training programs
-6. Training sessions
-7. Session capacity
-8. Session bookings
-9. Attendance
-10. Basic player development notes
+6. Program enrolment
+7. Training sessions
+8. Session capacity
+9. Session bookings
+10. Attendance
+11. Basic player development notes
 
-Payments and more advanced functionality can be implemented after the core workflow is stable.
+Payments come after the MVP. The database schema is built up over time: each table is added by a migration in the phase that needs it.
 
----
+## 8. Non-functional requirements
 
-## 8. Non-Functional Requirements
+* **Security:** hashed passwords, JWT authentication, role-based authorisation, input validation.
+* **Reliability:** database constraints for important rules, transaction-safe bookings, clear error responses, automated tests.
+* **Maintainability:** backend code grouped by feature, reusable frontend components, consistent formatting and linting, up-to-date documentation.
+* **Performance:** API responses should be quick at the scale of one academy. Queries shouldn't load more data than they need.
 
-The application should aim to provide:
+## 9. Testing
 
-### Security
+* **Backend (pytest):** unit, API endpoint, business rule, authentication/authorisation and database integration tests.
+* **Frontend (Vitest):** component, utility and UI behaviour tests.
+* **End-to-end (Playwright):** login, a coach creating a session, a parent booking a session, full-session behaviour, attendance, and role-based access.
 
-* Secure password storage
-* JWT authentication
-* Role-based authorisation
-* Input validation
-* Protected endpoints
-* Appropriate access controls
+Phase 1 includes a small set of these: health endpoint and database tests, frontend tests for the home page and API client, and a Playwright smoke test.
 
-### Reliability
+## 10. Technology
 
-* Database constraints for critical business rules
-* Automated testing
-* Error handling
-* Transaction-safe booking operations
-
-### Maintainability
-
-* Clear separation of responsibilities
-* Modular backend architecture
-* Reusable frontend components
-* Consistent coding standards
-* Documentation
-
-### Performance
-
-The system should provide responsive API requests under normal expected academy usage.
-
-Database queries should be designed to avoid unnecessary operations and inefficient data retrieval.
-
----
-
-## 9. Testing Requirements
-
-The project should include multiple levels of automated testing.
-
-### Backend
-
-Using `pytest`:
-
-* Unit tests
-* API endpoint tests
-* Business logic tests
-* Authentication/authorisation tests
-* Database integration tests
-
-### Frontend
-
-Using `Vitest`:
-
-* Component tests
-* Utility/function tests
-* UI behaviour tests
-
-### End-to-End
-
-Using `Playwright`:
-
-* User login
-* Coach creating a session
-* Parent booking a session
-* Full-session booking behaviour
-* Attendance workflow
-* Role-based access scenarios
-
----
-
-## 10. Planned Technology
-
-### Frontend
-
-* React
-* TypeScript
-* Tailwind CSS
-* Vitest
-* Playwright
-
-### Backend
-
-* Python
-* FastAPI
-* JWT authentication
-* pytest
-
-### Database
-
-* PostgreSQL
-
-### Development & Infrastructure
-
-* Docker
-* Docker Compose
-* Git
-* GitHub
-* GitHub Actions
-* AWS
-* Terraform
-
----
+* **Frontend:** React, TypeScript, Tailwind CSS, Vitest, Playwright
+* **Backend:** Python, FastAPI, JWT authentication, pytest
+* **Database:** PostgreSQL
+* **Development:** Docker, Docker Compose, Git, GitHub, GitHub Actions
+* **Deployment (Phase 7):** Terraform. The hosting provider will be chosen in Phase 7.
 
 ## 11. Architecture
 
-The initial architecture will follow a client-server model:
-
 ```text
 React + TypeScript
-        |
-        | HTTPS / REST API
-        v
-FastAPI Backend
-        |
-        | SQL / Database Access
-        v
+        │  REST API (JSON)
+        ▼
+FastAPI backend
+        │  SQL
+        ▼
 PostgreSQL
 ```
 
-Authentication and authorisation will be handled by the backend.
+The backend handles authentication and authorisation. The frontend only talks to the backend's REST API, never to the database directly. More detail is in [architecture.md](architecture.md).
 
-The frontend will consume the backend through REST APIs and will not directly access the PostgreSQL database.
+## 12. Development phases
 
----
+| Phase | Scope |
+|---|---|
+| **1. Foundation** (in progress) | Repository setup, documentation, backend and frontend skeletons, PostgreSQL in Docker, Docker Compose, CI |
+| **2. Authentication** | User model, parent registration, login, password hashing, JWT access tokens, role-based authorisation, coach creation script |
+| **2b. Refresh tokens** | Refresh tokens, rotation, revocation (logout) |
+| **3. Core management** | Players, parent–player relationships, training programs, program enrolment (`program_players`) |
+| **4. Sessions and bookings** | Sessions, session capacity, bookings, booking validation, handling concurrent bookings |
+| **5. Attendance and development** | Attendance records, development notes, player progress |
+| **6. Payments** | Invoices, payment status, payment history |
+| **7. Deployment** | Production configuration, choosing a hosting provider, Terraform, deployment pipeline, monitoring and logging |
 
-## 12. Development Phases
+## 13. Other sports
 
-### Phase 1 — Foundation
-
-* Repository setup
-* Project documentation
-* Backend initialisation
-* Frontend initialisation
-* PostgreSQL setup
-* Docker configuration
-* Initial CI pipeline
-
-### Phase 2 — Authentication
-
-* User model
-* Registration
-* Login
-* Password hashing
-* JWT authentication
-* Role-based authorisation
-
-### Phase 3 — Core Academy Management
-
-* Coaches
-* Parents
-* Players
-* Parent-player relationships
-* Training programs
-
-### Phase 4 — Sessions and Bookings
-
-* Session creation
-* Session management
-* Capacity management
-* Available-place calculation
-* Bookings
-* Booking validation
-* Concurrency handling
-
-### Phase 5 — Attendance and Development
-
-* Attendance records
-* Development notes
-* Player progress
-
-### Phase 6 — Payments
-
-* Invoices
-* Payment status
-* Payment history
-
-### Phase 7 — Production
-
-* Production configuration
-* AWS deployment
-* Terraform infrastructure
-* CI/CD deployment pipeline
-* Monitoring and logging
-
----
-
-## 13. Future Extensibility
-
-Although the initial implementation will focus on cricket, the system should avoid unnecessarily hard-coding cricket-specific assumptions.
-
-Potential future support includes:
-
-* Football
-* Basketball
-* Tennis
-* Swimming
-* Other sports
-
-The architecture should allow sport-specific functionality to be added without requiring a complete redesign of the platform.
+Cricket is the first use case, but the system shouldn't hard-code cricket-specific assumptions. Football, basketball, tennis, swimming or other sports should be possible later without redesigning the platform.

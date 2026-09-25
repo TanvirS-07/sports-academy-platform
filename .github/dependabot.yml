@@ -1,0 +1,56 @@
+# Weekly dependency update pull requests. Minor and patch updates are grouped
+# per ecosystem to keep the number of PRs manageable.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: uv
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      python-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  # Base images. Language/runtime upgrades (Python 3.13, Node 26, PostgreSQL 18) are
+  # deliberate decisions, so only patch-level image updates are proposed automatically.
+  # Python: 3.12.x patches only (3.12 -> 3.13 counts as a "minor" semver bump).
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major, version-update:semver-minor]
+
+  # Node: stay on the 24 LTS line (24.x minors are LTS updates).
+  - package-ecosystem: docker
+    directory: /frontend
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+
+  # PostgreSQL: stay on 17 (17.x minors are bug-fix releases).
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
