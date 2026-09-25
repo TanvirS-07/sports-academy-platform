@@ -5,14 +5,14 @@
 
 ## Context
 
-FastAPI supports both `async def` and plain `def` endpoints. SQLAlchemy 2.0 offers a synchronous API and an asyncio extension. The academy's expected traffic is small: a few coaches and parents at a time.
+FastAPI supports both `async def` and normal `def` endpoints, and SQLAlchemy supports both synchronous and async sessions. The app will only have a handful of coaches and parents using it at the same time.
 
 ## Decision
 
-Use **synchronous** SQLAlchemy sessions with the psycopg 3 driver and plain `def` endpoints. FastAPI runs these in its thread pool.
+Use synchronous SQLAlchemy sessions with the psycopg 3 driver and normal `def` endpoints. FastAPI runs these in a thread pool.
 
 ## Consequences
 
-* Simpler code, tests and debugging. There are no `await` chains, no async session lifecycle issues and no async-specific lazy-loading pitfalls.
-* Row locking (`SELECT … FOR UPDATE`) for booking capacity works the same way in both models, so correctness is not affected.
-* Throughput is limited by the thread pool size, which is far above what an academy needs. If that ever changes, endpoints can be migrated to async one at a time.
+* The code and tests are simpler, with no `await` chains or async session problems to debug.
+* Row locking with `SELECT … FOR UPDATE`, which the booking feature will use, works the same way in synchronous code.
+* The thread pool is more than enough for one academy. If that ever changes, individual endpoints can be moved to async later.

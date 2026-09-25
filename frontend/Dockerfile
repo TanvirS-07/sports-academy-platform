@@ -13,7 +13,7 @@ EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 # ---------- build: static production bundle in /app/dist ----------
-# In Phase 7 this output is uploaded to S3 + CloudFront, so no web server image is needed.
+# The static files in /app/dist will be deployed in Phase 7 (hosting not decided yet).
 FROM base AS build
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci

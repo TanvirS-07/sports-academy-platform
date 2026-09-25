@@ -1,4 +1,4 @@
-"""Health endpoints used by Docker, CI and (later) the AWS load balancer."""
+"""Health endpoints used by Docker Compose, CI and any future deployment health checks."""
 
 from typing import Annotated, Literal
 
