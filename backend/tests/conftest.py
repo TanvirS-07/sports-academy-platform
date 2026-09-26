@@ -36,6 +36,7 @@ from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
+from app.auth.rate_limit import login_rate_limiter  # noqa: E402
 from app.db.session import get_db, get_engine  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -45,6 +46,13 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 @pytest.fixture(scope="session", autouse=True)
 def _migrated_database() -> None:
     command.upgrade(Config(str(BACKEND_DIR / "alembic.ini")), "head")
+
+
+@pytest.fixture(autouse=True)
+def _reset_login_rate_limiter() -> Iterator[None]:
+    login_rate_limiter.clear()
+    yield
+    login_rate_limiter.clear()
 
 
 @pytest.fixture

@@ -148,3 +148,37 @@ def test_coach_can_log_in(client: TestClient, db_session: Session) -> None:
 
     assert response.status_code == 200
     assert decode_access_token(response.json()["access_token"]).role == "COACH"
+
+
+# --- Rate limiting ---
+
+
+def test_login_is_blocked_after_five_failed_attempts(
+    client: TestClient, db_session: Session
+) -> None:
+    make_user(db_session, email="parent@example.com")
+    wrong = {"email": "parent@example.com", "password": "wrong-password"}
+
+    for _ in range(5):
+        assert client.post(LOGIN_URL, json=wrong).status_code == 401
+
+    blocked = client.post(
+        LOGIN_URL, json={"email": "parent@example.com", "password": DEFAULT_PASSWORD}
+    )
+
+    assert blocked.status_code == 429
+    assert blocked.json()["error"]["code"] == "TOO_MANY_LOGIN_ATTEMPTS"
+
+
+def test_successful_login_resets_the_failure_count(client: TestClient, db_session: Session) -> None:
+    make_user(db_session, email="parent@example.com")
+    wrong = {"email": "parent@example.com", "password": "wrong-password"}
+    right = {"email": "parent@example.com", "password": DEFAULT_PASSWORD}
+
+    for _ in range(4):
+        client.post(LOGIN_URL, json=wrong)
+    assert client.post(LOGIN_URL, json=right).status_code == 200
+
+    for _ in range(4):
+        client.post(LOGIN_URL, json=wrong)
+    assert client.post(LOGIN_URL, json=right).status_code == 200
