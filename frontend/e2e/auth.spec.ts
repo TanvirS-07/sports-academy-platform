@@ -69,10 +69,10 @@ test('a parent cannot open the coach area', async ({ page }) => {
   await expect(page).toHaveURL('/parent')
 
   // Navigate in-app so the in-memory login is kept.
-  await page.evaluate(() => {
+  await page.evaluate(`
     window.history.pushState({}, '', '/coach')
     window.dispatchEvent(new PopStateEvent('popstate'))
-  })
+  `)
 
   await expect(page).toHaveURL('/parent')
   await expect(page.getByRole('heading', { name: 'Coach area' })).not.toBeVisible()
