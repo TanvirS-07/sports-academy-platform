@@ -46,7 +46,7 @@ docs/              specification, architecture, ADRs
 .github/           CI workflow, Dependabot
 ```
 
-**Planned:** each backend feature gets its own folder, for example `app/bookings/` with `router.py`, `schemas.py`, `models.py` and `service.py`. There will also be `app/policies.py` for authorisation (Phase 3), `backend/scripts/` for the coach creation script (Phase 2), and `frontend/src/features/` for feature-specific UI.
+**Planned:** each backend feature gets its own folder, for example `app/bookings/` with `router.py`, `schemas.py`, `models.py` and `service.py`. `app/auth/` and `app/users/` already follow this layout. There will also be `app/policies.py` for authorisation (Phase 3), and `frontend/src/features/` for feature-specific UI.
 
 ## 3. Backend
 
@@ -69,21 +69,25 @@ docs/              specification, architecture, ADRs
 
 **Implemented:** Vite, React, TypeScript, Tailwind CSS and React Router. `src/lib/api.ts` is the only place that calls the backend, and it turns error responses into an `ApiError`. The home page calls both health endpoints and shows the result.
 
+**Implemented in Phase 2:**
+
+* The logged-in user is kept in React Context (`src/auth/`). The access token is held in memory inside `api.ts` and added to every request.
+* `RequireAuth` and `RequireRole` restrict pages by role. This only affects what the user sees, because the backend checks permissions on every request.
+* If a request with a token comes back `401`, the user is logged out.
+
 **Planned:**
 
-* The logged-in user will be stored in React Context (Phase 2).
-* Pages will be restricted by role (Phase 2). This only affects what the user sees, because the backend checks permissions on every request.
 * TanStack Query will be added in Phase 3, when there's real data to fetch and cache. Until then, plain `fetch` is enough.
 
 ## 5. Database
 
-**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. Alembic is set up, but no application tables exist yet.
+**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. The `users` table was added in Phase 2.
 
 **Planned:** tables are added in the phase that needs them.
 
 | Phase | Table | Notes |
 |---|---|---|
-| 2 | `users` | email (unique, case-insensitive), password hash, role (COACH / PARENT / PLAYER) |
+| 2 (done) | `users` | email (stored lowercase, unique), Argon2 password hash, role (COACH / PARENT / PLAYER), `is_active` |
 | 2b | `refresh_tokens` | stored as hashes, with expiry and revocation time |
 | 3 | `players` | profile managed by a parent; optional `user_id` for a player login |
 | 3 | `parent_players` | links parents and players; a player can have more than one parent |
@@ -108,14 +112,16 @@ player login (users) ── players   (optional, players.user_id)
 * **Times** are stored in UTC and shown in Sydney time on the frontend.
 * **The table is called `training_sessions`** so it isn't confused with a database session.
 
-## 6. Authentication (planned, Phase 2 and 2b)
+## 6. Authentication (Phase 2 done, Phase 2b planned)
 
-* Passwords are hashed with Argon2 (`pwdlib`), and JWTs are created with `PyJWT`.
-* **Phase 2:** access tokens last 15 minutes. The frontend keeps them in memory, not in localStorage.
+* Passwords are hashed with Argon2 (`pwdlib`), and JWTs are created with `PyJWT` (HS256, signed with `JWT_SECRET`).
+* **Phase 2:** access tokens last 15 minutes. The frontend keeps them in memory, not in localStorage, so a page refresh logs you out until Phase 2b. Logout only forgets the token in the browser.
+* The backend loads the user from the database on every request, so a deactivated account stops working straight away and the role always comes from the database.
+* A wrong password and an unknown email get the same `401` response. After 5 failed attempts for an email within a minute, login returns `429`. This limit is kept in memory, which is fine while the backend runs as one process.
 * **Phase 2b:** refresh tokens last about 7 days. They're sent in an `httpOnly` cookie and stored as hashes in the database. They're rotated each time they're used and revoked on logout.
-* **Accounts:** only parents can sign up publicly. Coaches are created with a script, and player logins are added later by a parent.
+* **Accounts:** only parents can sign up publicly. Coaches are created with `scripts/create_coach.py`, and player logins are added later by a parent.
 
-## 7. Authorisation (planned, Phase 2 and 3)
+## 7. Authorisation (role checks done, ownership checks in Phase 3)
 
 There are two checks:
 
@@ -132,6 +138,9 @@ If a user asks for something they aren't allowed to see, the API returns `404` s
 |---|---|---|
 | GET | `/api/v1/health` | `{"status": "ok"}` |
 | GET | `/api/v1/health/db` | `{"status": "ok", "database": "ok"}`, or `503` if the database can't be reached |
+| POST | `/api/v1/auth/register` | Creates a parent. `201`, or `409 EMAIL_ALREADY_REGISTERED` |
+| POST | `/api/v1/auth/login` | `{"access_token", "token_type", "expires_in"}`, or `401` / `429` |
+| GET | `/api/v1/users/me` | The logged-in user, or `401` |
 
 FastAPI also generates API docs at `/docs`.
 
@@ -139,7 +148,6 @@ FastAPI also generates API docs at `/docs`.
 
 | Phase | Endpoints |
 |---|---|
-| 2 | `POST /auth/register`, `POST /auth/login`, `GET /users/me` |
 | 2b | `POST /auth/refresh`, `POST /auth/logout` |
 | 3 | `/players`, `/programs`, `/programs/{id}/players` (enrolment) |
 | 4 | `/sessions`, `/sessions/{id}/cancel`, `/sessions/{id}/bookings`, `/bookings`, `/bookings/{id}/cancel` |
@@ -174,9 +182,13 @@ Cancelling a booking uses the same lock and frees the place again.
   * Health endpoints, including the `503` case.
   * The error format for unknown routes and wrong methods.
   * A database connection check.
-  * A check that migrations have a single head and can upgrade and downgrade.
-* **Frontend (Vitest + React Testing Library):** the API client and the home page's loading, success and error states.
-* **End-to-end (Playwright):** the home page shows the API and database as OK, and unknown routes show the not-found page.
+  * A check that migrations have a single head, can upgrade and downgrade, and match the models.
+  * Password hashing and access tokens (expired, tampered with, wrong secret, wrong type).
+  * Registration, login, `/users/me`, the login rate limit, role checks and the coach script.
+* **Frontend (Vitest + React Testing Library):** the API client, the home page, the login and register forms, and the route guards.
+* **End-to-end (Playwright):** the home page health checks, the not-found page, parent registration, login and logout, coach login, and a parent being kept out of the coach area.
+
+Each backend test runs inside a transaction that's rolled back afterwards, so tests don't share data.
 
 Tests use real PostgreSQL instead of SQLite, because later features depend on row locks and constraints that SQLite handles differently. As a safety measure, the test suite won't run against a database whose name doesn't end in `_test`.
 

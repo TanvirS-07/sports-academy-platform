@@ -5,9 +5,12 @@ description = "FastAPI backend for the Sports Academy Management Platform"
 requires-python = "==3.12.*"
 dependencies = [
     "alembic==1.20.0",
+    "email-validator==2.3.0",
     "fastapi==0.141.1",
     "psycopg[binary]==3.3.6",
+    "pwdlib[argon2]==0.3.1",
     "pydantic-settings==2.15.0",
+    "pyjwt==2.15.0",
     "sqlalchemy==2.1.0",
     "uvicorn[standard]==0.53.0",
 ]

@@ -38,6 +38,7 @@ jobs:
       APP_ENV: test
       DATABASE_URL: postgresql+psycopg://academy:academy_ci_password@localhost:5432/academy_test
       TEST_DATABASE_URL: postgresql+psycopg://academy:academy_ci_password@localhost:5432/academy_test
+      JWT_SECRET: ci-only-jwt-secret-that-is-long-enough
     steps:
       - uses: actions/checkout@v7
 
@@ -121,6 +122,14 @@ jobs:
 
       - name: Apply migrations
         run: docker compose exec -T backend alembic upgrade head
+
+      - name: Create the coach account used by the tests
+        env:
+          COACH_PASSWORD: e2e-coach-password
+        run: >
+          docker compose exec -T -e COACH_PASSWORD backend
+          python -m scripts.create_coach
+          --email e2e-coach@example.com --first-name E2E --last-name Coach
 
       - name: Run Playwright
         working-directory: frontend

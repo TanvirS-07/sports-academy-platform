@@ -4,6 +4,10 @@
  * All requests go to /api/v1. In development Vite proxies /api to the FastAPI
  * backend, so the browser only ever talks to one origin.
  *
+ * When the user is logged in, the access token is attached as a Bearer header.
+ * The token is kept in memory only (never localStorage), so it's gone after a
+ * page refresh. Phase 2b adds a refresh cookie to fix that.
+ *
  * Errors are normalised into ApiError using the backend's standard error shape:
  *   { "error": { "code": "SOME_CODE", "message": "..." } }
  */
@@ -36,21 +40,48 @@ async function toApiError(response: Response): Promise<ApiError> {
   }
 }
 
-export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
+let accessToken: string | null = null
+let onUnauthorized: (() => void) | null = null
+
+export function setAccessToken(token: string | null) {
+  accessToken = token
+}
+
+/** Called when a request sent with a token comes back 401 (for example, it expired). */
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler
+}
+
+async function request<T>(method: string, path: string, body?: unknown, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const sentToken = accessToken
+  if (sentToken) headers.Authorization = `Bearer ${sentToken}`
+
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
-      method: 'GET',
-      headers: { Accept: 'application/json', ...init?.headers },
+      method,
+      headers: { ...headers, ...init?.headers },
+      body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
     throw new ApiError(0, 'NETWORK_ERROR', 'Unable to reach the server')
   }
 
   if (!response.ok) {
+    if (response.status === 401 && sentToken) onUnauthorized?.()
     throw await toApiError(response)
   }
 
   return (await response.json()) as T
+}
+
+export function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
+  return request<T>('GET', path, undefined, init)
+}
+
+export function apiPost<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+  return request<T>('POST', path, body, init)
 }
