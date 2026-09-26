@@ -12,8 +12,8 @@ from sqlalchemy import create_engine, pool
 from app.core.config import get_settings
 from app.db.base import Base
 
-# Import model modules here as they are added so autogenerate can see them, e.g.
-# from app.users import models as users_models  # noqa: F401
+# Import every models module so autogenerate can see the tables.
+from app.users import models as users_models  # noqa: F401
 
 config = context.config
 
