@@ -35,6 +35,7 @@ RUN uv sync --frozen --no-dev
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY app ./app
+COPY scripts ./scripts
 
 RUN useradd --system --no-create-home appuser
 USER appuser
