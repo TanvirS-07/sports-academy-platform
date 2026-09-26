@@ -25,6 +25,7 @@ if not _database_name.endswith("_test"):
 
 os.environ["DATABASE_URL"] = _test_database_url
 os.environ.setdefault("APP_ENV", "test")
+os.environ.setdefault("JWT_SECRET", "test-only-jwt-secret-that-is-long-enough")
 
 from fastapi.testclient import TestClient  # noqa: E402
 

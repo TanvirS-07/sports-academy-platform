@@ -4,8 +4,7 @@ Every error returned by the API has the same shape:
 
     {"error": {"code": "SOME_CODE", "message": "Human readable message", "details": [...]}}
 
-Later phases add more AppError subclasses (for example NotFoundError, ConflictError)
-when a feature actually needs them.
+New AppError subclasses are added when a feature needs them.
 """
 
 from typing import Any
@@ -33,10 +32,34 @@ class AppError(Exception):
 
     status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
     code: str = "INTERNAL_ERROR"
+    headers: dict[str, str] | None = None
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str, code: str | None = None) -> None:
         super().__init__(message)
         self.message = message
+        if code is not None:
+            self.code = code
+
+
+class UnauthorizedError(AppError):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    code = "UNAUTHORIZED"
+    headers = {"WWW-Authenticate": "Bearer"}
+
+
+class ForbiddenError(AppError):
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "FORBIDDEN"
+
+
+class ConflictError(AppError):
+    status_code = status.HTTP_409_CONFLICT
+    code = "CONFLICT"
+
+
+class TooManyRequestsError(AppError):
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    code = "TOO_MANY_REQUESTS"
 
 
 class ServiceUnavailableError(AppError):
@@ -70,7 +93,7 @@ def _error_response(
 
 async def _app_error_handler(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, AppError)
-    return _error_response(exc.status_code, exc.code, exc.message)
+    return _error_response(exc.status_code, exc.code, exc.message, headers=exc.headers)
 
 
 async def _http_error_handler(_: Request, exc: Exception) -> JSONResponse:
