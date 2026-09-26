@@ -1,15 +1,16 @@
-"""FastAPI dependencies for the logged-in user."""
+"""FastAPI dependencies for the logged-in user and role checks."""
 
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.errors import UnauthorizedError
+from app.core.errors import ForbiddenError, UnauthorizedError
 from app.core.security import InvalidTokenError, decode_access_token
 from app.db.session import get_db
-from app.users.models import User
+from app.users.models import Role, User
 
 # auto_error=False so a missing header goes through our own error format.
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -37,3 +38,17 @@ def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def require_role(*roles: Role) -> Callable[[User], User]:
+    """Dependency that only lets users with one of the given roles through.
+
+    Usage: `coach: Annotated[User, Depends(require_role(Role.COACH))]`
+    """
+
+    def check_role(user: CurrentUser) -> User:
+        if user.role not in roles:
+            raise ForbiddenError("You don't have permission to do this")
+        return user
+
+    return check_role
