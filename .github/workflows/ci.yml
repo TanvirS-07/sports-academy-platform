@@ -123,6 +123,14 @@ jobs:
       - name: Apply migrations
         run: docker compose exec -T backend alembic upgrade head
 
+      - name: Create the coach account used by the tests
+        env:
+          COACH_PASSWORD: e2e-coach-password
+        run: >
+          docker compose exec -T -e COACH_PASSWORD backend
+          python -m scripts.create_coach
+          --email e2e-coach@example.com --first-name E2E --last-name Coach
+
       - name: Run Playwright
         working-directory: frontend
         env:
