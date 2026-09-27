@@ -1,6 +1,6 @@
 # Architecture
 
-This document explains how the project is structured and why. Each section says whether it's **implemented** (Phase 1) or **planned** for a later phase. Requirements are in [project_specs.md](project_specs.md), and individual decisions are in [adr/](adr/).
+This document explains how the project is structured and why. Each section says whether it's **implemented** or **planned** for a later phase. Requirements are in [project_specs.md](project_specs.md), and individual decisions are in [adr/](adr/).
 
 I'm building this on my own, so the aim is to use a small set of tools I understand well and to add things only when a feature needs them.
 
@@ -29,24 +29,33 @@ The frontend only talks to the backend API. The backend will enforce all busines
 backend/
   app/
     main.py        creates the FastAPI app, registers error handlers and routers
-    core/          settings (config.py) and the error format (errors.py)
+    core/          settings (config.py), the error format (errors.py), hashing and tokens (security.py)
     db/            SQLAlchemy base class and database session
     api/v1.py      combines all /api/v1 routers
     health/        health check endpoints
-  alembic/         migration setup (no migrations yet)
-  tests/           api/ and integration/ tests
+    auth/          register, login, refresh, logout, role checks
+    users/         User model and /users/me
+    players/       players, parent links and the coach search
+    sports/        sports list
+    programs/      programs and enrolments
+    policies.py    ownership checks
+  alembic/         migrations
+  scripts/         create_coach.py
+  tests/           unit/, api/, integration/ and scripts/ tests
 frontend/
   src/
-    components/    Layout
-    pages/         HomePage, NotFoundPage
-    lib/api.ts     fetch wrapper for calling the backend
-  e2e/             Playwright smoke test
+    auth/          login state, route guards
+    components/    Layout, form fields
+    features/      API hooks and forms for players and programs
+    pages/         one component per page
+    lib/           fetch wrapper (api.ts), TanStack Query setup, dates, error messages
+  e2e/             Playwright tests
 docker/            Postgres init script
 docs/              specification, architecture, ADRs
 .github/           CI workflow, Dependabot
 ```
 
-**Planned:** each backend feature gets its own folder, for example `app/bookings/` with `router.py`, `schemas.py`, `models.py` and `service.py`. `app/auth/` and `app/users/` already follow this layout. There will also be `app/policies.py` for authorisation (Phase 3), and `frontend/src/features/` for feature-specific UI.
+Each backend feature has its own folder with `router.py`, `schemas.py`, `models.py` and `service.py` (`app/auth/`, `app/users/`, `app/players/`, `app/sports/` and `app/programs/` so far). Ownership checks are in `app/policies.py`. On the frontend, `src/features/` holds the API hooks and forms for each feature, and `src/pages/` holds the pages.
 
 ## 3. Backend
 
@@ -63,7 +72,7 @@ docs/              specification, architecture, ADRs
 { "error": { "code": "SERVICE_UNAVAILABLE", "message": "Database is unavailable" } }
 ```
 
-**Planned:** each feature will be split into three parts. The router handles HTTP. The service holds the business rules and transactions. The models define the database tables. Services will use SQLAlchemy directly, without a separate repository layer, because another layer would add code without solving a problem at this size.
+Each feature is split into three parts. The router handles HTTP. The service holds the business rules and transactions. The models define the database tables. Services use SQLAlchemy directly, without a separate repository layer, because another layer would add code without solving a problem at this size.
 
 ## 4. Frontend
 
@@ -82,13 +91,16 @@ docs/              specification, architecture, ADRs
 * Only one refresh runs at a time. Inside a tab, callers share the request that's already running. Across tabs, a Web Lock makes the second tab wait for the first, so two tabs never send the same refresh token (which would look like reuse and log both out).
 * Logout calls `POST /auth/logout`.
 
-**Planned:**
+**Implemented in Phase 3:**
 
-* TanStack Query will be added in Phase 3, when there's real data to fetch and cache. Until then, plain `fetch` is enough.
+* TanStack Query fetches and caches data. Each feature has its hooks in `src/features/<feature>/api.ts`, which call `api.ts`. After a change (for example enrolling a player), the hook invalidates the related queries so the page reloads them.
+* 4xx errors aren't retried, because asking again won't change the answer. The cache is cleared on logout, so the next person to log in on the same browser can't see the last person's data.
+* Parents have a "My players" list, a form to add a player, and a page for each player with their programs.
+* Coaches have a "My programs" list, a form to create or edit a program, and a page for each program with its players, a search to enrol a player, and a button to make an enrolment inactive or active again.
 
 ## 5. Database
 
-**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. The `users` table was added in Phase 2 and `refresh_tokens` in Phase 2b.
+**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. The `users` table was added in Phase 2, `refresh_tokens` in Phase 2b, and `players`, `parent_players`, `sports`, `programs` and `program_players` in Phase 3.
 
 **Planned:** tables are added in the phase that needs them.
 
@@ -96,11 +108,11 @@ docs/              specification, architecture, ADRs
 |---|---|---|
 | 2 (done) | `users` | email (stored lowercase, unique), Argon2 password hash, role (COACH / PARENT / PLAYER), `is_active` |
 | 2b (done) | `refresh_tokens` | SHA-256 hash of the token (unique), `family_id`, `expires_at`, `revoked_at`; deleted along with the user |
-| 3 | `players` | profile managed by a parent; optional `user_id` for a player login |
-| 3 | `parent_players` | links parents and players; a player can have more than one parent |
-| 3 | `sports` | seeded with Cricket |
-| 3 | `programs` | owned by a coach |
-| 3 | `program_players` | enrolment; primary key `(program_id, player_id)`, status ACTIVE / INACTIVE |
+| 3 (done) | `players` | first name, last name, date of birth; optional unique `user_id` for a player login later |
+| 3 (done) | `parent_players` | primary key `(parent_id, player_id)`; the parent who adds a player is linked automatically; a player can have more than one parent |
+| 3 (done) | `sports` | unique name; the migration adds Cricket; new sports are added by migration |
+| 3 (done) | `programs` | owned by a coach; name, sport, age group, description, training objectives |
+| 3 (done) | `program_players` | enrolment; primary key `(program_id, player_id)`, status ACTIVE / INACTIVE; enrolments are made inactive, not deleted |
 | 4 | `training_sessions` | times stored as `timestamptz`; `capacity` and `booked_count` with CHECK constraints |
 | 4 | `bookings` | status CONFIRMED / CANCELLED; one confirmed booking per player per session |
 | 5 | `attendance` | one record per player per session: PRESENT / ABSENT / EXCUSED |
@@ -139,14 +151,16 @@ player login (users) ── players   (optional, players.user_id)
   * Old token rows aren't cleaned up yet. That's fine at this size, and a cleanup job can be added later.
 * **Accounts:** only parents can sign up publicly. Coaches are created with `scripts/create_coach.py`, and player logins are added later by a parent.
 
-## 7. Authorisation (role checks done, ownership checks in Phase 3)
+## 7. Authorisation (done in Phases 2 and 3)
 
 There are two checks:
 
 1. **Role check:** a FastAPI dependency, for example `require_role(Role.COACH)`. A wrong role returns `403`.
-2. **Ownership check:** functions in `app/policies.py`, for example `can_manage_session(user, session)` or `can_act_for_player(user, player)`.
+2. **Ownership check:** functions in `app/policies.py`. So far there's `can_act_for_player` (a parent linked to the player) and `can_manage_program` (the coach who owns the program). Phase 4 adds checks for sessions and bookings.
 
 If a user asks for something they aren't allowed to see, the API returns `404` so it doesn't reveal that the record exists. List endpoints only return the user's own records.
+
+**Children's details:** a player's date of birth is only returned to their parents and to the coach of a program they're actively enrolled in. Coaches find players to enrol with a name search, which returns the name and the parents' first names only. The search is a `POST` so children's names don't end up in URLs or server logs.
 
 ## 8. REST API
 
@@ -161,6 +175,14 @@ If a user asks for something they aren't allowed to see, the API returns `404` s
 | POST | `/api/v1/auth/refresh` | A new access token and refresh cookie, or `401 INVALID_REFRESH_TOKEN` (and the cookie is cleared) |
 | POST | `/api/v1/auth/logout` | Revokes the refresh token and clears the cookie. Always `204` |
 | GET | `/api/v1/users/me` | The logged-in user, or `401` |
+| GET | `/api/v1/sports` | All sports. Any logged-in user |
+| GET, POST | `/api/v1/players` | Parents: list their players, or add one (`201`) |
+| GET, PATCH | `/api/v1/players/{id}` | Parents: one of their players (with their active programs), or edit it. `404 PLAYER_NOT_FOUND` for anyone else's |
+| POST | `/api/v1/players/search` | Coaches: `{"query": "sam"}` (at least 2 characters). Up to 20 players with their parents' first names |
+| GET, POST | `/api/v1/programs` | Coaches: list their programs, or create one (`201`, or `422 SPORT_NOT_FOUND`) |
+| GET, PATCH | `/api/v1/programs/{id}` | Coaches: one of their programs, or edit it. `404 PROGRAM_NOT_FOUND` for anyone else's |
+| GET, POST | `/api/v1/programs/{id}/players` | The program's coach: list enrolments, or enrol a player (`201`, `409 ALREADY_ENROLLED`, or `422 PLAYER_NOT_FOUND`). Enrolling an inactive player makes them active again |
+| PATCH | `/api/v1/programs/{id}/players/{player_id}` | The program's coach: set the status to `ACTIVE` or `INACTIVE`, or `404 ENROLMENT_NOT_FOUND` |
 
 FastAPI also generates API docs at `/docs`.
 
@@ -168,7 +190,6 @@ FastAPI also generates API docs at `/docs`.
 
 | Phase | Endpoints |
 |---|---|
-| 3 | `/players`, `/programs`, `/programs/{id}/players` (enrolment) |
 | 4 | `/sessions`, `/sessions/{id}/cancel`, `/sessions/{id}/bookings`, `/bookings`, `/bookings/{id}/cancel` |
 | 5 | `/sessions/{id}/attendance`, `/players/{id}/attendance`, `/players/{id}/development-notes` |
 
@@ -205,14 +226,15 @@ Cancelling a booking uses the same lock and frees the place again.
   * Password hashing and access tokens (expired, tampered with, wrong secret, wrong type).
   * Registration, login, `/users/me`, the login rate limit, role checks and the coach script.
   * Refresh tokens: the cookie flags, rotation, expiry, reuse detection, inactive users and logout.
-* **Frontend (Vitest + React Testing Library):** the API client, the home page, the login and register forms, the route guards, restoring the login on load, and refresh-and-retry.
-* **End-to-end (Playwright):** the home page health checks, the not-found page, parent registration, login and logout, coach login, a parent being kept out of the coach area, staying logged in after a reload, and staying logged out after logging out.
+  * Players, programs and enrolment, including checks that parents and coaches can't see or change each other's records, that the wrong role gets `403`, and that date of birth isn't shown in search results or for inactive enrolments.
+* **Frontend (Vitest + React Testing Library):** the API client, the home page, the login and register forms, the route guards, restoring the login on load, refresh-and-retry, and the parent player pages and coach program pages.
+* **End-to-end (Playwright):** the home page health checks, the not-found page, parent registration, login and logout, coach login, a parent being kept out of the coach area, staying logged in after a reload, staying logged out after logging out, and a coach enrolling a parent's child in a program, which the parent then sees.
 
 Each backend test runs inside a transaction that's rolled back afterwards, so tests don't share data.
 
 Tests use real PostgreSQL instead of SQLite, because later features depend on row locks and constraints that SQLite handles differently. As a safety measure, the test suite won't run against a database whose name doesn't end in `_test`.
 
-**Planned:** tests for authorisation (each role against resources they do and don't own), business rules, a concurrent booking test, and Playwright tests for the main user flows.
+**Planned:** authorisation and business rule tests for sessions and bookings, a concurrent booking test, and Playwright tests for the booking and attendance flows.
 
 ## 11. Security
 
@@ -264,10 +286,10 @@ The provider, hosting setup, secrets storage and costs will be decided in Phase 
 
 | Phase | Scope | Done when |
 |---|---|---|
-| **1. Foundation** (in progress) | Project structure, Docker Compose, Alembic setup, health endpoints, home page, CI | The stack starts with one command and CI passes |
-| **2. Authentication** | `users`, parent registration, login, access tokens, role checks, coach script | Auth tests pass and login works |
-| **2b. Refresh tokens** | `refresh_tokens`, rotation, logout | Refresh and revocation tests pass |
-| **3. Core management** | Players, parents, programs, `program_players`, `policies.py` | Coaches can enrol players; authorisation tests pass |
+| **1. Foundation** (done) | Project structure, Docker Compose, Alembic setup, health endpoints, home page, CI | The stack starts with one command and CI passes |
+| **2. Authentication** (done) | `users`, parent registration, login, access tokens, role checks, coach script | Auth tests pass and login works |
+| **2b. Refresh tokens** (done) | `refresh_tokens`, rotation, logout | Refresh and revocation tests pass |
+| **3. Core management** (done) | Players, parents, programs, `program_players`, `policies.py` | Coaches can enrol players; authorisation tests pass |
 | **4. Sessions and bookings** | Sessions, session capacity, bookings, cancellation | The concurrent booking test passes |
 | **5. Attendance and development** | Attendance, development notes | All MVP Playwright flows pass |
 | **6. Payments** | Invoices, payment status | Parents can see invoices |
