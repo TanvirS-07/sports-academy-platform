@@ -9,6 +9,7 @@ from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
 from app.players.models import ParentPlayer, Player
+from app.programs.models import Program
 from app.users.models import Role, User
 
 
@@ -25,3 +26,8 @@ def can_act_for_player(db: Session, user: User, player: Player) -> bool:
             )
         )
     )
+
+
+def can_manage_program(user: User, program: Program) -> bool:
+    """Coaches manage the programs they own."""
+    return user.role == Role.COACH and program.coach_id == user.id

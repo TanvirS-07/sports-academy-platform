@@ -2,12 +2,17 @@
 
 from datetime import date
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
 from app.players.models import Player
 from app.players.schemas import PlayerCreate
 from app.players.service import create_player
+from app.programs.models import Program
+from app.programs.schemas import ProgramCreate
+from app.programs.service import create_program
+from app.sports.models import Sport
 from app.users.models import Role, User
 from app.users.service import create_user
 
@@ -50,4 +55,22 @@ def make_player(
         db,
         parent,
         PlayerCreate(first_name=first_name, last_name=last_name, date_of_birth=date_of_birth),
+    )
+
+
+def cricket(db: Session) -> Sport:
+    sport = db.scalar(select(Sport).where(Sport.name == "Cricket"))
+    assert sport is not None, "The Cricket row comes from a migration"
+    return sport
+
+
+def make_program(
+    db: Session,
+    coach: User,
+    *,
+    name: str = "U14 Cricket Development",
+    age_group: str = "Under 14",
+) -> Program:
+    return create_program(
+        db, coach, ProgramCreate(name=name, sport_id=cricket(db).id, age_group=age_group)
     )
