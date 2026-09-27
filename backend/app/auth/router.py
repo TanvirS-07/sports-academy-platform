@@ -9,6 +9,7 @@ from app.auth.rate_limit import login_rate_limiter
 from app.auth.refresh_tokens import (
     INVALID_REFRESH_TOKEN_MESSAGE,
     issue_refresh_token,
+    revoke_refresh_token,
     rotate_refresh_token,
 )
 from app.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
@@ -92,3 +93,19 @@ def refresh(
     set_refresh_cookie(response, new_refresh_token)
     access_token = create_access_token(user.id, user.role.value)
     return TokenResponse(access_token=access_token.token, expires_in=access_token.expires_in)
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Revoke the refresh cookie and clear it",
+)
+def logout(
+    response: Response,
+    db: Annotated[Session, Depends(get_db)],
+    refresh_token: Annotated[str | None, Cookie(alias=REFRESH_COOKIE_NAME)] = None,
+) -> None:
+    # No access token is needed, so logging out still works after it has expired.
+    if refresh_token is not None:
+        revoke_refresh_token(db, refresh_token)
+    clear_refresh_cookie(response)

@@ -86,3 +86,13 @@ def rotate_refresh_token(db: Session, token: str, now: datetime | None = None) -
     new_token = _add_token(db, user.id, stored.family_id, now)
     db.commit()
     return user, new_token
+
+
+def revoke_refresh_token(db: Session, token: str, now: datetime | None = None) -> None:
+    """Revoke a token on logout. Unknown or already revoked tokens are ignored."""
+    db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.token_hash == _hash(token), RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=now or datetime.now(UTC))
+    )
+    db.commit()

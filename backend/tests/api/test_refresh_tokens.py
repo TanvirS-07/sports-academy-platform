@@ -15,6 +15,7 @@ from tests.helpers import DEFAULT_PASSWORD, make_user
 
 LOGIN_URL = "/api/v1/auth/login"
 REFRESH_URL = "/api/v1/auth/refresh"
+LOGOUT_URL = "/api/v1/auth/logout"
 
 
 def _cookie(response: httpx.Response) -> SimpleCookie:
@@ -217,3 +218,46 @@ def test_deleting_a_user_deletes_their_tokens(client: TestClient, db_session: Se
     db_session.commit()
 
     assert db_session.scalars(select(RefreshToken)).all() == []
+
+
+# --- Logout ---
+
+
+def _log_out(client: TestClient, token: str) -> httpx.Response:
+    client.cookies.clear()
+    return client.post(LOGOUT_URL, headers={"Cookie": f"refresh_token={token}"})
+
+
+def test_logout_revokes_the_token_and_clears_the_cookie(
+    client: TestClient, db_session: Session
+) -> None:
+    make_user(db_session)
+    token = _log_in(client)
+
+    response = _log_out(client, token)
+
+    assert response.status_code == 204
+    _assert_cookie_cleared(response)
+    assert db_session.scalars(select(RefreshToken)).one().revoked_at is not None
+    assert _refresh(client, token).status_code == 401
+
+
+def test_logout_without_a_cookie_still_succeeds(client: TestClient) -> None:
+    response = client.post(LOGOUT_URL)
+
+    assert response.status_code == 204
+    _assert_cookie_cleared(response)
+
+
+def test_logout_with_an_unknown_token_still_succeeds(client: TestClient) -> None:
+    assert _log_out(client, "not-a-real-token").status_code == 204
+
+
+def test_logout_only_affects_that_login(client: TestClient, db_session: Session) -> None:
+    make_user(db_session)
+    phone = _log_in(client)
+    laptop = _log_in(client)
+
+    _log_out(client, phone)
+
+    assert _refresh(client, laptop).status_code == 200
