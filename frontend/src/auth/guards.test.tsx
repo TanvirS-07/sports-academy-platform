@@ -14,12 +14,15 @@ const routes = [
   { path: '/account', element: <RequireAuth><p>account content</p></RequireAuth> },
 ]
 
-async function logInAs(user: User) {
-  mockBackend({
+function backendFor(user: User) {
+  return mockBackend({
     'POST /api/v1/auth/login': () => jsonResponse(tokenResponse),
     'GET /api/v1/users/me': () => jsonResponse(user),
   })
-  fireEvent.change(screen.getByLabelText('Email'), { target: { value: user.email } })
+}
+
+async function logInAs(user: User) {
+  fireEvent.change(await screen.findByLabelText('Email'), { target: { value: user.email } })
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-good-password' } })
   fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
 }
@@ -27,14 +30,28 @@ async function logInAs(user: User) {
 describe('route guards', () => {
   afterEach(() => setAccessToken(null))
 
-  it('sends logged-out users to the login page', () => {
+  it('sends logged-out users to the login page', async () => {
+    mockBackend({})
     renderAt('/account', routes)
 
-    expect(screen.getByTestId('current-path')).toHaveTextContent('/login')
+    expect(await screen.findByText('/login')).toBeInTheDocument()
     expect(screen.queryByText('account content')).not.toBeInTheDocument()
   })
 
+  it('shows a loading message while checking for a saved login', async () => {
+    let finishRefresh: (response: Response) => void = () => {}
+    mockBackend({ 'POST /api/v1/auth/refresh': () => new Promise<Response>((resolve) => (finishRefresh = resolve)) })
+    renderAt('/account', routes)
+
+    expect(screen.getByText('Loading…')).toBeInTheDocument()
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/account')
+
+    finishRefresh(jsonResponse({ error: { code: 'INVALID_REFRESH_TOKEN', message: 'x' } }, 401))
+    expect(await screen.findByText('/login')).toBeInTheDocument()
+  })
+
   it('returns to the page the user wanted after logging in', async () => {
+    backendFor(parentUser)
     renderAt('/account', routes)
 
     await logInAs(parentUser)
@@ -43,6 +60,7 @@ describe('route guards', () => {
   })
 
   it('lets a coach into the coach area', async () => {
+    backendFor(coachUser)
     renderAt('/coach', routes)
 
     await logInAs(coachUser)
@@ -51,6 +69,7 @@ describe('route guards', () => {
   })
 
   it('sends a parent away from the coach area to their own area', async () => {
+    backendFor(parentUser)
     renderAt('/coach', routes)
 
     await logInAs(parentUser)

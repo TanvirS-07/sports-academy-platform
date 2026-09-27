@@ -6,19 +6,19 @@ The idea comes from helping run a cricket coaching academy. A lot of the work th
 
 ## Project status
 
-**Phase 1 (Foundation) is done. Phase 2 (Authentication) is in progress.**
+**Phase 1 (Foundation) and Phase 2 (Authentication, including refresh tokens) are done. Phase 3 (Core management) is next.**
 
 What exists right now:
 
 * A FastAPI backend with health checks, parent registration, login and a `/users/me` endpoint
-* JWT access tokens, Argon2 password hashing and role checks (Coach and Parent)
+* JWT access tokens, refresh tokens in an httpOnly cookie, Argon2 password hashing and role checks (Coach and Parent)
 * A script for creating coach accounts (public sign-up only creates parents)
 * A React frontend with login, register, a coach area, a parent area and an account page
-* PostgreSQL running in Docker, with a `users` table managed by Alembic
+* PostgreSQL running in Docker, with `users` and `refresh_tokens` tables managed by Alembic
 * Backend, frontend and end-to-end tests
 * A GitHub Actions CI pipeline
 
-Refreshing the page currently logs you out, because the access token is only kept in memory. Refresh tokens (Phase 2b) will fix that.
+You stay logged in for 7 days, even after refreshing the page or closing the browser. Logging out ends the login on the server as well as in the browser.
 
 Everything else in this README describes planned features. The development phases are listed in [docs/project_specs.md](docs/project_specs.md#12-development-phases).
 

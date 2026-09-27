@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     # Generate one with: python -c "import secrets; print(secrets.token_urlsafe(48))"
     jwt_secret: str = Field(min_length=32)
     access_token_expire_minutes: int = Field(default=15, ge=1, le=1440)
+    # How long you stay logged in without using the site. Each refresh starts a new period.
+    refresh_token_expire_days: int = Field(default=7, ge=1, le=90)
 
     # Comma-separated list of allowed browser origins. Empty means CORS is disabled,
     # which is the default for local development because Vite proxies /api requests.

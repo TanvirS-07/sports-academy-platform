@@ -38,6 +38,7 @@ services:
       # Dev-only default. Never reuse this value outside local development.
       JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-do-not-use-anywhere-else}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       WATCHFILES_FORCE_POLLING: ${WATCH_POLLING:-false}
     ports:

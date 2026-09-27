@@ -9,10 +9,10 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+# Every models module is imported so autogenerate can see the tables.
+from app.auth import models as auth_models  # noqa: F401
 from app.core.config import get_settings
 from app.db.base import Base
-
-# Import every models module so autogenerate can see the tables.
 from app.users import models as users_models  # noqa: F401
 
 config = context.config

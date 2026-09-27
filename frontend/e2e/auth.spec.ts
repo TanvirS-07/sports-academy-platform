@@ -59,9 +59,42 @@ test('a coach can log in and reach the coach area', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Coach area' })).toBeVisible()
 
   await page.goto('/account')
-  // A full page load clears the in-memory token (until Phase 2b), so this
-  // checks the redirect to login rather than the account details.
+  // A full page load clears the in-memory token, and the refresh cookie logs the coach back in.
+  await expect(page).toHaveURL('/account')
+  await expect(page.getByTestId('header-user')).toHaveText('E2E')
+})
+
+test('a parent stays logged in after reloading the page', async ({ page }) => {
+  await registerParent(page, uniqueParentEmail())
+  await expect(page).toHaveURL('/parent')
+
+  await page.reload()
+
+  await expect(page).toHaveURL('/parent')
+  await expect(page.getByRole('heading', { name: 'Parent area' })).toBeVisible()
+  await expect(page.getByTestId('header-user')).toHaveText('Alex')
+})
+
+test('a parent stays logged out after logging out and reloading', async ({ page }) => {
+  await registerParent(page, uniqueParentEmail())
+  await expect(page).toHaveURL('/parent')
+
+  await page.getByRole('button', { name: 'Log out' }).click()
+  await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible()
+  await page.goto('/parent')
+
   await expect(page).toHaveURL('/login')
+})
+
+test('two tabs can load at the same time and both stay logged in', async ({ page, context }) => {
+  await registerParent(page, uniqueParentEmail())
+  await expect(page).toHaveURL('/parent')
+  const secondTab = await context.newPage()
+
+  await Promise.all([page.reload(), secondTab.goto('/parent')])
+
+  await expect(page.getByRole('heading', { name: 'Parent area' })).toBeVisible()
+  await expect(secondTab.getByRole('heading', { name: 'Parent area' })).toBeVisible()
 })
 
 test('a parent cannot open the coach area', async ({ page }) => {

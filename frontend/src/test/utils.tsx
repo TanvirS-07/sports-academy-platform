@@ -14,16 +14,37 @@ export function jsonResponse(body: unknown, status = 200): Response {
 
 type Handler = (init: RequestInit) => Response | Promise<Response>
 
-/** Stubs fetch with one handler per "METHOD /api/v1/path". */
+const noRefreshCookie = () =>
+  jsonResponse({ error: { code: 'INVALID_REFRESH_TOKEN', message: 'Your session has expired.' } }, 401)
+
+/**
+ * Stubs fetch with one handler per "METHOD /api/v1/path".
+ * Unless a test says otherwise, there's no refresh cookie, so the app starts logged out.
+ */
 export function mockBackend(handlers: Record<string, Handler>) {
+  const allHandlers: Record<string, Handler> = { 'POST /api/v1/auth/refresh': noRefreshCookie, ...handlers }
   const fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
     const key = `${init.method ?? 'GET'} ${url}`
-    const handler = handlers[key]
+    const handler = allHandlers[key]
     if (!handler) throw new Error(`Unexpected request: ${key}`)
     return handler(init)
   })
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
+}
+
+/** The RequestInit of each call to one "METHOD /api/v1/path", in order. */
+export function callsTo(fetchMock: ReturnType<typeof mockBackend>, key: string): RequestInit[] {
+  return fetchMock.mock.calls
+    .filter(([url, init]) => `${init?.method ?? 'GET'} ${url}` === key)
+    .map(([, init]) => init ?? {})
+}
+
+/** The RequestInit of the first call to one "METHOD /api/v1/path". Fails the test if there wasn't one. */
+export function firstCallTo(fetchMock: ReturnType<typeof mockBackend>, key: string): RequestInit {
+  const [init] = callsTo(fetchMock, key)
+  if (!init) throw new Error(`Expected a request to ${key}`)
+  return init
 }
 
 /** Shows the current path so tests can check where a redirect went. */

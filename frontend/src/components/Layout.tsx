@@ -4,8 +4,10 @@ import { homePathFor } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
 
 function HeaderNav() {
-  const { user, logout } = useAuth()
+  const { user, restoring, logout } = useAuth()
   const navigate = useNavigate()
+
+  if (restoring) return null
 
   if (!user) {
     return (
@@ -31,7 +33,7 @@ function HeaderNav() {
       <button
         type="button"
         onClick={() => {
-          logout()
+          void logout()
           navigate('/', { replace: true })
         }}
         className="text-slate-500 hover:text-slate-800"

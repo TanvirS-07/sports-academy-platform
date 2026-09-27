@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiError, apiGet, apiPost, setAccessToken, setUnauthorizedHandler } from './api'
+import {
+  ApiError,
+  apiGet,
+  apiPost,
+  refreshAccessToken,
+  setAccessToken,
+  setUnauthorizedHandler,
+} from './api'
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -127,5 +134,90 @@ describe('apiPost and the access token', () => {
 
     await expect(apiPost('/auth/login', {})).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' })
     expect(handler).not.toHaveBeenCalled()
+  })
+})
+
+describe('refreshing the access token', () => {
+  afterEach(() => {
+    setAccessToken(null)
+    setUnauthorizedHandler(null)
+    vi.unstubAllGlobals()
+  })
+
+  const expired = () => jsonResponse({ error: { code: 'INVALID_TOKEN', message: 'x' } }, 401)
+  const noCookie = () => jsonResponse({ error: { code: 'INVALID_REFRESH_TOKEN', message: 'x' } }, 401)
+  const refreshed = () => jsonResponse({ access_token: 'new-token', token_type: 'bearer', expires_in: 900 })
+
+  it('refreshes once and retries when the access token has expired', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(expired())
+      .mockResolvedValueOnce(refreshed())
+      .mockResolvedValueOnce(jsonResponse({ email: 'a@example.com' }))
+    vi.stubGlobal('fetch', fetchMock)
+    const handler = vi.fn()
+    setUnauthorizedHandler(handler)
+    setAccessToken('old-token')
+
+    await expect(apiGet('/users/me')).resolves.toEqual({ email: 'a@example.com' })
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/users/me',
+      '/api/v1/auth/refresh',
+      '/api/v1/users/me',
+    ])
+    const [, retryInit] = fetchMock.mock.calls[2] as [string, RequestInit]
+    expect(retryInit.headers).toMatchObject({ Authorization: 'Bearer new-token' })
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('logs out when the refresh fails', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(expired()).mockResolvedValueOnce(noCookie())
+    vi.stubGlobal('fetch', fetchMock)
+    const handler = vi.fn()
+    setUnauthorizedHandler(handler)
+    setAccessToken('old-token')
+
+    await expect(apiGet('/users/me')).rejects.toMatchObject({ status: 401 })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(handler).toHaveBeenCalledOnce()
+  })
+
+  it('only retries once', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(expired())
+      .mockResolvedValueOnce(refreshed())
+      .mockResolvedValueOnce(expired())
+    vi.stubGlobal('fetch', fetchMock)
+    const handler = vi.fn()
+    setUnauthorizedHandler(handler)
+    setAccessToken('old-token')
+
+    await expect(apiGet('/users/me')).rejects.toMatchObject({ status: 401 })
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(handler).toHaveBeenCalledOnce()
+  })
+
+  it('shares one refresh request between callers in the same tab', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(refreshed())
+    vi.stubGlobal('fetch', fetchMock)
+
+    const results = await Promise.all([refreshAccessToken(), refreshAccessToken()])
+
+    expect(results).toEqual([true, true])
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('holds a Web Lock while refreshing so other tabs wait', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(refreshed()))
+    const request = vi.fn((_name: string, callback: () => Promise<boolean>) => callback())
+    vi.stubGlobal('navigator', { ...navigator, locks: { request } })
+
+    await expect(refreshAccessToken()).resolves.toBe(true)
+
+    expect(request).toHaveBeenCalledWith('auth-refresh', expect.any(Function))
   })
 })

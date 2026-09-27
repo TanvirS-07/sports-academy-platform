@@ -91,9 +91,14 @@ def _error_response(
     )
 
 
+def app_error_response(exc: AppError) -> JSONResponse:
+    """The response for an AppError, for routes that need to change it before returning."""
+    return _error_response(exc.status_code, exc.code, exc.message, headers=exc.headers)
+
+
 async def _app_error_handler(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, AppError)
-    return _error_response(exc.status_code, exc.code, exc.message, headers=exc.headers)
+    return app_error_response(exc)
 
 
 async def _http_error_handler(_: Request, exc: Exception) -> JSONResponse:
