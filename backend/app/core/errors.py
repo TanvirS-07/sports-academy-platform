@@ -62,6 +62,13 @@ class ConflictError(AppError):
     code = "CONFLICT"
 
 
+class UnprocessableError(AppError):
+    """Well-formed data that still can't be used, for example an id that doesn't exist."""
+
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+    code = "UNPROCESSABLE"
+
+
 class TooManyRequestsError(AppError):
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
     code = "TOO_MANY_REQUESTS"

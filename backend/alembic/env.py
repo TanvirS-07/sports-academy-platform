@@ -14,6 +14,8 @@ from app.auth import models as auth_models  # noqa: F401
 from app.core.config import get_settings
 from app.db.base import Base
 from app.players import models as players_models  # noqa: F401
+from app.programs import models as programs_models  # noqa: F401
+from app.sports import models as sports_models  # noqa: F401
 from app.users import models as users_models  # noqa: F401
 
 config = context.config
