@@ -1,6 +1,6 @@
 # Sports Academy Management Platform: Project Specification
 
-This document describes what the platform should do. Most of it is planned work. Phase 1 (foundation) and Phase 2 (authentication, including refresh tokens) are done. The features below are added in later phases (see [section 12](#12-development-phases)).
+This document describes what the platform should do. Most of it is planned work. Phase 1 (foundation), Phase 2 (authentication, including refresh tokens) and Phase 3 (players, programs and enrolment) are done. The features below are added in later phases (see [section 12](#12-development-phases)).
 
 ## 1. Overview
 
@@ -208,7 +208,7 @@ Payments come after the MVP. The database schema is built up over time: each tab
 * **Frontend (Vitest):** component, utility and UI behaviour tests.
 * **End-to-end (Playwright):** login, a coach creating a session, a parent booking a session, full-session behaviour, attendance, and role-based access.
 
-So far, Phases 1 and 2 cover health checks and database tests, registration, login and role checks on the backend, frontend tests for the forms and route guards, and Playwright tests for sign-up, login and role-based access.
+So far, Phases 1 to 3 cover health checks and database tests, registration, login, role checks, players, programs, enrolment and ownership checks on the backend, frontend tests for the forms, route guards and the player and program pages, and Playwright tests for sign-up, login, role-based access and a coach enrolling a parent's child.
 
 ## 10. Technology
 
@@ -239,7 +239,7 @@ The backend handles authentication and authorisation. The frontend only talks to
 | **1. Foundation** (done) | Repository setup, documentation, backend and frontend skeletons, PostgreSQL in Docker, Docker Compose, CI |
 | **2. Authentication** (done) | User model, parent registration, login, password hashing, JWT access tokens, role-based authorisation, coach creation script |
 | **2b. Refresh tokens** (done) | Refresh tokens, rotation, revocation (logout) |
-| **3. Core management** | Players, parent–player relationships, training programs, program enrolment (`program_players`) |
+| **3. Core management** (done) | Players, parent–player relationships, training programs, program enrolment (`program_players`) |
 | **4. Sessions and bookings** | Sessions, session capacity, bookings, booking validation, handling concurrent bookings |
 | **5. Attendance and development** | Attendance records, development notes, player progress |
 | **6. Payments** | Invoices, payment status, payment history |
