@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
@@ -16,6 +17,14 @@ type Handler = (init: RequestInit) => Response | Promise<Response>
 
 const noRefreshCookie = () =>
   jsonResponse({ error: { code: 'INVALID_REFRESH_TOKEN', message: 'Your session has expired.' } }, 401)
+
+/** Backend handlers that restore a login from the refresh cookie, as if the page was reloaded. */
+export function loggedInAs(user: { role: string }): Record<string, Handler> {
+  return {
+    'POST /api/v1/auth/refresh': () => jsonResponse(tokenResponse),
+    'GET /api/v1/users/me': () => jsonResponse(user),
+  }
+}
 
 /**
  * Stubs fetch with one handler per "METHOD /api/v1/path".
@@ -54,18 +63,22 @@ function CurrentPath() {
 
 /** Renders `ui` at `path` inside the router and auth provider. */
 export function renderAt(path: string, routes: { path: string; element: ReactElement }[]) {
+  // A fresh cache per test, with no retries so failed requests show up straight away.
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <AuthProvider>
-        <Routes>
-          {routes.map((route) => (
-            <Route key={route.path} path={route.path} element={route.element} />
-          ))}
-          <Route path="*" element={null} />
-        </Routes>
-        <CurrentPath />
-      </AuthProvider>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[path]}>
+        <AuthProvider>
+          <Routes>
+            {routes.map((route) => (
+              <Route key={route.path} path={route.path} element={route.element} />
+            ))}
+            <Route path="*" element={null} />
+          </Routes>
+          <CurrentPath />
+        </AuthProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 

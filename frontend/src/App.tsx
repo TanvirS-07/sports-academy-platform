@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router'
+import { Outlet, Route, Routes } from 'react-router'
 
 import { RequireAuth, RequireRole } from './auth/guards'
 import { Layout } from './components/Layout'
@@ -6,8 +6,10 @@ import { AccountPage } from './pages/AccountPage'
 import { CoachPage } from './pages/CoachPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
+import { NewPlayerPage } from './pages/NewPlayerPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ParentPage } from './pages/ParentPage'
+import { PlayerPage } from './pages/PlayerPage'
 import { RegisterPage } from './pages/RegisterPage'
 
 export function App() {
@@ -29,10 +31,14 @@ export function App() {
           path="parent"
           element={
             <RequireRole roles={['PARENT']}>
-              <ParentPage />
+              <Outlet />
             </RequireRole>
           }
-        />
+        >
+          <Route index element={<ParentPage />} />
+          <Route path="players/new" element={<NewPlayerPage />} />
+          <Route path="players/:playerId" element={<PlayerPage />} />
+        </Route>
         <Route
           path="account"
           element={

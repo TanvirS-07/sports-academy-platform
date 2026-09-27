@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { apiGet, apiPost, refreshAccessToken, setAccessToken, setUnauthorizedHandler } from '../lib/api'
@@ -7,11 +8,14 @@ import type { RegisterData, TokenResponse, User } from './types'
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [restoring, setRestoring] = useState(true)
+  const queryClient = useQueryClient()
 
   const forgetUser = useCallback(() => {
     setAccessToken(null)
     setUser(null)
-  }, [])
+    // Drop cached data so the next person to log in on this browser can't see it.
+    queryClient.clear()
+  }, [queryClient])
 
   const logout = useCallback(async () => {
     forgetUser()
