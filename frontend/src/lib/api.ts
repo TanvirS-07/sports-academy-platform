@@ -135,3 +135,7 @@ export function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
 export function apiPost<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
   return request<T>('POST', path, body, init)
 }
+
+export function apiPatch<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+  return request<T>('PATCH', path, body, init)
+}
