@@ -75,20 +75,27 @@ docs/              specification, architecture, ADRs
 * `RequireAuth` and `RequireRole` restrict pages by role. This only affects what the user sees, because the backend checks permissions on every request.
 * If a request with a token comes back `401`, the user is logged out.
 
+**Implemented in Phase 2b:**
+
+* When the app loads, it calls `POST /auth/refresh` to log back in from the refresh cookie. The route guards show "Loading…" until that finishes, so a reload doesn't bounce you to the login page.
+* If a request comes back `401`, `api.ts` refreshes the access token once and retries the request. If the refresh fails, the user is logged out.
+* Only one refresh runs at a time. Inside a tab, callers share the request that's already running. Across tabs, a Web Lock makes the second tab wait for the first, so two tabs never send the same refresh token (which would look like reuse and log both out).
+* Logout calls `POST /auth/logout`.
+
 **Planned:**
 
 * TanStack Query will be added in Phase 3, when there's real data to fetch and cache. Until then, plain `fetch` is enough.
 
 ## 5. Database
 
-**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. The `users` table was added in Phase 2.
+**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. The `users` table was added in Phase 2 and `refresh_tokens` in Phase 2b.
 
 **Planned:** tables are added in the phase that needs them.
 
 | Phase | Table | Notes |
 |---|---|---|
 | 2 (done) | `users` | email (stored lowercase, unique), Argon2 password hash, role (COACH / PARENT / PLAYER), `is_active` |
-| 2b | `refresh_tokens` | stored as hashes, with expiry and revocation time |
+| 2b (done) | `refresh_tokens` | SHA-256 hash of the token (unique), `family_id`, `expires_at`, `revoked_at`; deleted along with the user |
 | 3 | `players` | profile managed by a parent; optional `user_id` for a player login |
 | 3 | `parent_players` | links parents and players; a player can have more than one parent |
 | 3 | `sports` | seeded with Cricket |
@@ -112,13 +119,24 @@ player login (users) ── players   (optional, players.user_id)
 * **Times** are stored in UTC and shown in Sydney time on the frontend.
 * **The table is called `training_sessions`** so it isn't confused with a database session.
 
-## 6. Authentication (Phase 2 done, Phase 2b planned)
+## 6. Authentication (Phase 2 and 2b done)
 
 * Passwords are hashed with Argon2 (`pwdlib`), and JWTs are created with `PyJWT` (HS256, signed with `JWT_SECRET`).
-* **Phase 2:** access tokens last 15 minutes. The frontend keeps them in memory, not in localStorage, so a page refresh logs you out until Phase 2b. Logout only forgets the token in the browser.
+* **Access tokens** last 15 minutes. The frontend keeps them in memory, not in localStorage.
 * The backend loads the user from the database on every request, so a deactivated account stops working straight away and the role always comes from the database.
 * A wrong password and an unknown email get the same `401` response. After 5 failed attempts for an email within a minute, login returns `429`. This limit is kept in memory, which is fine while the backend runs as one process.
-* **Phase 2b:** refresh tokens last about 7 days. They're sent in an `httpOnly` cookie and stored as hashes in the database. They're rotated each time they're used and revoked on logout.
+* **Refresh tokens** (Phase 2b) keep you logged in for 7 days (`REFRESH_TOKEN_EXPIRE_DAYS`). Each refresh starts a new 7 days, so you're only logged out after a week of not using the site.
+  * The token is a random string, not a JWT. Only its SHA-256 hash is stored, so a copy of the database can't be used to log in.
+  * It's sent in an `httpOnly`, `SameSite=Strict` cookie with `Path=/api/v1/auth`, so JavaScript can't read it and the browser only sends it to the auth endpoints. `Secure` is on everywhere except local development, which runs over plain http.
+  * Login sets the cookie. Every refresh revokes the old token and sets a new one (rotation). A failed refresh clears the cookie.
+  * Every token from one login shares a `family_id`. If a revoked token is used again, it was probably stolen, so every token in that family is revoked and that login ends everywhere. Other logins (another device) aren't affected.
+  * The token row is locked while it's being rotated, so two requests with the same token can't both succeed.
+  * Refresh fails for expired, revoked or unknown tokens, and for deactivated users.
+  * Logout revokes the token and clears the cookie. It doesn't need an access token, so it still works after the access token has expired.
+* **CSRF:** the frontend and API are served from one origin, and `SameSite=Strict` stops other sites sending the cookie, so CSRF tokens aren't needed.
+* **Known limitations:**
+  * If a refresh response never reaches the browser (for example, the connection drops), the browser keeps the old cookie. The next refresh then looks like reuse and the user has to log in again.
+  * Old token rows aren't cleaned up yet. That's fine at this size, and a cleanup job can be added later.
 * **Accounts:** only parents can sign up publicly. Coaches are created with `scripts/create_coach.py`, and player logins are added later by a parent.
 
 ## 7. Authorisation (role checks done, ownership checks in Phase 3)
@@ -139,7 +157,9 @@ If a user asks for something they aren't allowed to see, the API returns `404` s
 | GET | `/api/v1/health` | `{"status": "ok"}` |
 | GET | `/api/v1/health/db` | `{"status": "ok", "database": "ok"}`, or `503` if the database can't be reached |
 | POST | `/api/v1/auth/register` | Creates a parent. `201`, or `409 EMAIL_ALREADY_REGISTERED` |
-| POST | `/api/v1/auth/login` | `{"access_token", "token_type", "expires_in"}`, or `401` / `429` |
+| POST | `/api/v1/auth/login` | `{"access_token", "token_type", "expires_in"}` and the refresh cookie, or `401` / `429` |
+| POST | `/api/v1/auth/refresh` | A new access token and refresh cookie, or `401 INVALID_REFRESH_TOKEN` (and the cookie is cleared) |
+| POST | `/api/v1/auth/logout` | Revokes the refresh token and clears the cookie. Always `204` |
 | GET | `/api/v1/users/me` | The logged-in user, or `401` |
 
 FastAPI also generates API docs at `/docs`.
@@ -148,7 +168,6 @@ FastAPI also generates API docs at `/docs`.
 
 | Phase | Endpoints |
 |---|---|
-| 2b | `POST /auth/refresh`, `POST /auth/logout` |
 | 3 | `/players`, `/programs`, `/programs/{id}/players` (enrolment) |
 | 4 | `/sessions`, `/sessions/{id}/cancel`, `/sessions/{id}/bookings`, `/bookings`, `/bookings/{id}/cancel` |
 | 5 | `/sessions/{id}/attendance`, `/players/{id}/attendance`, `/players/{id}/development-notes` |
@@ -185,8 +204,9 @@ Cancelling a booking uses the same lock and frees the place again.
   * A check that migrations have a single head, can upgrade and downgrade, and match the models.
   * Password hashing and access tokens (expired, tampered with, wrong secret, wrong type).
   * Registration, login, `/users/me`, the login rate limit, role checks and the coach script.
-* **Frontend (Vitest + React Testing Library):** the API client, the home page, the login and register forms, and the route guards.
-* **End-to-end (Playwright):** the home page health checks, the not-found page, parent registration, login and logout, coach login, and a parent being kept out of the coach area.
+  * Refresh tokens: the cookie flags, rotation, expiry, reuse detection, inactive users and logout.
+* **Frontend (Vitest + React Testing Library):** the API client, the home page, the login and register forms, the route guards, restoring the login on load, and refresh-and-retry.
+* **End-to-end (Playwright):** the home page health checks, the not-found page, parent registration, login and logout, coach login, a parent being kept out of the coach area, staying logged in after a reload, and staying logged out after logging out.
 
 Each backend test runs inside a transaction that's rolled back afterwards, so tests don't share data.
 

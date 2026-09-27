@@ -1,6 +1,6 @@
 # Sports Academy Management Platform: Project Specification
 
-This document describes what the platform should do. Most of it is planned work. Phase 1 (foundation) is done and Phase 2 (authentication) is in progress. The features below are added in later phases (see [section 12](#12-development-phases)).
+This document describes what the platform should do. Most of it is planned work. Phase 1 (foundation) and Phase 2 (authentication, including refresh tokens) are done. The features below are added in later phases (see [section 12](#12-development-phases)).
 
 ## 1. Overview
 
@@ -237,8 +237,8 @@ The backend handles authentication and authorisation. The frontend only talks to
 | Phase | Scope |
 |---|---|
 | **1. Foundation** (done) | Repository setup, documentation, backend and frontend skeletons, PostgreSQL in Docker, Docker Compose, CI |
-| **2. Authentication** (in progress) | User model, parent registration, login, password hashing, JWT access tokens, role-based authorisation, coach creation script |
-| **2b. Refresh tokens** | Refresh tokens, rotation, revocation (logout) |
+| **2. Authentication** (done) | User model, parent registration, login, password hashing, JWT access tokens, role-based authorisation, coach creation script |
+| **2b. Refresh tokens** (done) | Refresh tokens, rotation, revocation (logout) |
 | **3. Core management** | Players, parent–player relationships, training programs, program enrolment (`program_players`) |
 | **4. Sessions and bookings** | Sessions, session capacity, bookings, booking validation, handling concurrent bookings |
 | **5. Attendance and development** | Attendance records, development notes, player progress |
