@@ -5,8 +5,9 @@
  * backend, so the browser only ever talks to one origin.
  *
  * When the user is logged in, the access token is attached as a Bearer header.
- * The token is kept in memory only (never localStorage), so it's gone after a
- * page refresh. Phase 2b adds a refresh cookie to fix that.
+ * The token is kept in memory only (never localStorage). The backend also sets an
+ * httpOnly refresh cookie, which refreshAccessToken() swaps for a new access token
+ * after a page reload or when the old one expires.
  *
  * Errors are normalised into ApiError using the backend's standard error shape:
  *   { "error": { "code": "SOME_CODE", "message": "..." } }
@@ -47,12 +48,56 @@ export function setAccessToken(token: string | null) {
   accessToken = token
 }
 
-/** Called when a request sent with a token comes back 401 (for example, it expired). */
+/** Called when a request sent with a token comes back 401 and refreshing didn't help. */
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler
 }
 
-async function request<T>(method: string, path: string, body?: unknown, init?: RequestInit): Promise<T> {
+let refreshInFlight: Promise<boolean> | null = null
+
+async function sendRefresh(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) {
+      accessToken = null
+      return false
+    }
+    const body = (await response.json()) as { access_token: string }
+    accessToken = body.access_token
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Swaps the refresh cookie for a new access token. Resolves to false if there's
+ * no valid cookie (the user needs to log in again).
+ *
+ * Each refresh token only works once, so two refreshes must never send the same
+ * cookie. Inside a tab, callers share the one request that's already running.
+ * Across tabs, a Web Lock makes the second tab wait until the first has finished,
+ * by which point the browser has the new cookie.
+ */
+export function refreshAccessToken(): Promise<boolean> {
+  refreshInFlight ??= (
+    'locks' in navigator ? navigator.locks.request('auth-refresh', sendRefresh) : sendRefresh()
+  ).finally(() => {
+    refreshInFlight = null
+  })
+  return refreshInFlight
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  init?: RequestInit,
+  isRetry = false,
+): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   const sentToken = accessToken
@@ -71,10 +116,15 @@ async function request<T>(method: string, path: string, body?: unknown, init?: R
   }
 
   if (!response.ok) {
-    if (response.status === 401 && sentToken) onUnauthorized?.()
+    if (response.status === 401 && sentToken) {
+      // The access token has probably expired. Get a new one and try once more.
+      if (!isRetry && (await refreshAccessToken())) return request<T>(method, path, body, init, true)
+      onUnauthorized?.()
+    }
     throw await toApiError(response)
   }
 
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 

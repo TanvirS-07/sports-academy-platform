@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { setAccessToken } from '../lib/api'
-import { coachUser, jsonResponse, mockBackend, parentUser, renderAt, tokenResponse } from '../test/utils'
+import { coachUser, firstCallTo, jsonResponse, mockBackend, parentUser, renderAt, tokenResponse } from '../test/utils'
 import { LoginPage } from './LoginPage'
 
 function fillAndSubmit(email: string, password: string) {
@@ -26,7 +26,7 @@ describe('LoginPage', () => {
     fillAndSubmit('parent@example.com', 'a-good-password')
 
     expect(await screen.findByText('/parent')).toBeInTheDocument()
-    const [, loginInit] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const loginInit = firstCallTo(fetchMock, 'POST /api/v1/auth/login')
     expect(JSON.parse(loginInit.body as string)).toEqual({
       email: 'parent@example.com',
       password: 'a-good-password',

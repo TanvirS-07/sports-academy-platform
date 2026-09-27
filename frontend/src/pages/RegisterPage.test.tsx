@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { setAccessToken } from '../lib/api'
-import { jsonResponse, mockBackend, parentUser, renderAt, tokenResponse } from '../test/utils'
+import { callsTo, firstCallTo, jsonResponse, mockBackend, parentUser, renderAt, tokenResponse } from '../test/utils'
 import { RegisterPage } from './RegisterPage'
 
 const routes = [{ path: '/register', element: <RegisterPage /> }]
@@ -29,7 +29,7 @@ describe('RegisterPage', () => {
     fillForm('a-good-password')
 
     expect(await screen.findByText('/parent')).toBeInTheDocument()
-    const [, registerInit] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const registerInit = firstCallTo(fetchMock, 'POST /api/v1/auth/register')
     const sent = JSON.parse(registerInit.body as string)
     expect(sent).toEqual({
       first_name: 'Alex',
@@ -47,7 +47,7 @@ describe('RegisterPage', () => {
     fillForm('short')
 
     expect(screen.getByRole('alert')).toHaveTextContent('at least 8 characters')
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(callsTo(fetchMock, 'POST /api/v1/auth/register')).toHaveLength(0)
   })
 
   it('shows a message when the email is already registered', async () => {
