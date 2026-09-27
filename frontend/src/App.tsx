@@ -7,9 +7,11 @@ import { CoachPage } from './pages/CoachPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NewPlayerPage } from './pages/NewPlayerPage'
+import { NewProgramPage } from './pages/NewProgramPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ParentPage } from './pages/ParentPage'
 import { PlayerPage } from './pages/PlayerPage'
+import { ProgramPage } from './pages/ProgramPage'
 import { RegisterPage } from './pages/RegisterPage'
 
 export function App() {
@@ -23,10 +25,14 @@ export function App() {
           path="coach"
           element={
             <RequireRole roles={['COACH']}>
-              <CoachPage />
+              <Outlet />
             </RequireRole>
           }
-        />
+        >
+          <Route index element={<CoachPage />} />
+          <Route path="programs/new" element={<NewProgramPage />} />
+          <Route path="programs/:programId" element={<ProgramPage />} />
+        </Route>
         <Route
           path="parent"
           element={
