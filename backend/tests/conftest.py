@@ -36,7 +36,7 @@ from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
-from app.auth.rate_limit import login_rate_limiter  # noqa: E402
+from app.auth.rate_limit import ip_login_rate_limiter, login_rate_limiter  # noqa: E402
 from app.db.session import get_db, get_engine  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -51,8 +51,10 @@ def _migrated_database() -> None:
 @pytest.fixture(autouse=True)
 def _reset_login_rate_limiter() -> Iterator[None]:
     login_rate_limiter.clear()
+    ip_login_rate_limiter.clear()
     yield
     login_rate_limiter.clear()
+    ip_login_rate_limiter.clear()
 
 
 @pytest.fixture

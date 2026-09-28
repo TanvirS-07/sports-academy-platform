@@ -182,3 +182,13 @@ def test_successful_login_resets_the_failure_count(client: TestClient, db_sessio
     for _ in range(4):
         client.post(LOGIN_URL, json=wrong)
     assert client.post(LOGIN_URL, json=right).status_code == 200
+
+
+def test_one_address_is_blocked_after_twenty_failures_across_emails(client: TestClient) -> None:
+    for number in range(20):
+        wrong = {"email": f"parent{number}@example.com", "password": "wrong-password"}
+        assert client.post(LOGIN_URL, json=wrong).status_code == 401
+
+    blocked = client.post(LOGIN_URL, json={"email": "new@example.com", "password": "anything"})
+
+    assert blocked.status_code == 429
