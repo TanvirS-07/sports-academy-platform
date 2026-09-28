@@ -5,7 +5,7 @@ import { QueryState } from '../components/QueryState'
 import { useProgram, useRoster, useSetEnrolmentStatus, useUpdateProgram } from '../features/programs/api'
 import { EnrolPlayer } from '../features/programs/EnrolPlayer'
 import { ProgramForm } from '../features/programs/ProgramForm'
-import { useSessions } from '../features/sessions/api'
+import { useSessions, type TrainingSession } from '../features/sessions/api'
 import { placesText } from '../features/sessions/places'
 import { formatDate } from '../lib/dates'
 import { errorMessage } from '../lib/errors'
@@ -15,10 +15,15 @@ export function ProgramPage() {
   const { programId = '' } = useParams()
   const program = useProgram(programId)
   const roster = useRoster(programId)
-  const sessions = useSessions(programId)
+  const sessions = useSessions(programId, { includePast: true })
   const updateProgram = useUpdateProgram(programId)
   const setStatus = useSetEnrolmentStatus(programId)
   const [editing, setEditing] = useState(false)
+
+  // The API returns them oldest first. Past ones are shown newest first, for attendance.
+  const now = new Date()
+  const upcoming = sessions.data?.filter((session) => new Date(session.ends_at) > now)
+  const past = sessions.data?.filter((session) => new Date(session.ends_at) <= now).reverse().slice(0, 10)
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -77,18 +82,16 @@ export function ProgramPage() {
               </Link>
             </div>
             <QueryState isPending={sessions.isPending} error={sessions.error} />
-            {sessions.data?.length === 0 && <p className="text-slate-600">No upcoming sessions.</p>}
-            <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
-              {sessions.data?.map((session) => (
-                <li key={session.id}>
-                  <Link to={`/coach/sessions/${session.id}`} className="block px-4 py-3 hover:bg-slate-50">
-                    <p className="font-medium">{formatSessionTime(session.starts_at, session.ends_at)}</p>
-                    <p className="text-sm text-slate-500">{session.location} · {placesText(session)}</p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            {upcoming?.length === 0 && <p className="text-slate-600">No upcoming sessions.</p>}
+            <SessionLinks sessions={upcoming ?? []} />
           </section>
+
+          {past && past.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold">Past sessions</h2>
+              <SessionLinks sessions={past} />
+            </section>
+          )}
 
           <section className="space-y-3">
             <h2 className="text-lg font-semibold">Players</h2>
@@ -106,7 +109,10 @@ export function ProgramPage() {
                 return (
                   <li key={enrolment.player_id} className="flex items-center justify-between px-4 py-3">
                     <div>
-                      <p className={active ? 'font-medium' : 'font-medium text-slate-400'}>{name}</p>
+                      <Link to={`/coach/programs/${programId}/players/${enrolment.player_id}`}
+                        className={active ? 'font-medium hover:underline' : 'font-medium text-slate-400 hover:underline'}>
+                        {name}
+                      </Link>
                       <p className="text-sm text-slate-500">
                         {enrolment.date_of_birth ? `Born ${formatDate(enrolment.date_of_birth)}` : 'Inactive'}
                       </p>
@@ -129,5 +135,20 @@ export function ProgramPage() {
         </>
       )}
     </div>
+  )
+}
+
+function SessionLinks({ sessions }: { sessions: TrainingSession[] }) {
+  return (
+    <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+      {sessions.map((session) => (
+        <li key={session.id}>
+          <Link to={`/coach/sessions/${session.id}`} className="block px-4 py-3 hover:bg-slate-50">
+            <p className="font-medium">{formatSessionTime(session.starts_at, session.ends_at)}</p>
+            <p className="text-sm text-slate-500">{session.location} · {placesText(session)}</p>
+          </Link>
+        </li>
+      ))}
+    </ul>
   )
 }

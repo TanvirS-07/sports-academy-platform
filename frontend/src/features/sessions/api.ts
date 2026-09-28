@@ -32,11 +32,17 @@ export type SessionBooking = {
 
 export const sessionsKey = ['sessions'] as const
 
-/** A coach's upcoming sessions (optionally for one program), or a parent's. */
-export function useSessions(programId?: string) {
-  const query = programId ? `?program_id=${encodeURIComponent(programId)}` : ''
+/**
+ * A coach's upcoming sessions (optionally for one program, and optionally past ones
+ * too), or a parent's.
+ */
+export function useSessions(programId?: string, { includePast = false } = {}) {
+  const params = new URLSearchParams()
+  if (programId) params.set('program_id', programId)
+  if (includePast) params.set('include_past', 'true')
+  const query = params.size ? `?${params.toString()}` : ''
   return useQuery({
-    queryKey: [...sessionsKey, 'list', programId ?? 'all'],
+    queryKey: [...sessionsKey, 'list', programId ?? 'all', includePast],
     queryFn: () => apiGet<TrainingSession[]>(`/sessions${query}`),
   })
 }

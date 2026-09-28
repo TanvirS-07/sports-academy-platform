@@ -3,6 +3,7 @@ import { Outlet, Route, Routes } from 'react-router'
 import { RequireAuth, RequireRole } from './auth/guards'
 import { Layout } from './components/Layout'
 import { AccountPage } from './pages/AccountPage'
+import { CoachPlayerPage } from './pages/CoachPlayerPage'
 import { CoachSessionPage } from './pages/CoachSessionPage'
 import { CoachPage } from './pages/CoachPage'
 import { HomePage } from './pages/HomePage'
@@ -36,6 +37,7 @@ export function App() {
           <Route path="programs/new" element={<NewProgramPage />} />
           <Route path="programs/:programId" element={<ProgramPage />} />
           <Route path="programs/:programId/sessions/new" element={<NewSessionPage />} />
+          <Route path="programs/:programId/players/:playerId" element={<CoachPlayerPage />} />
           <Route path="sessions/:sessionId" element={<CoachSessionPage />} />
         </Route>
         <Route

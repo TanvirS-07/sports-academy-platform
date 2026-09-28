@@ -50,7 +50,7 @@ describe('coach program pages', () => {
       'POST /api/v1/programs': () => jsonResponse(program, 201),
       'GET /api/v1/programs/g1': () => jsonResponse(program),
       'GET /api/v1/programs/g1/players': () => jsonResponse([]),
-      'GET /api/v1/sessions?program_id=g1': () => jsonResponse([]),
+      'GET /api/v1/sessions?program_id=g1&include_past=true': () => jsonResponse([]),
     })
 
     renderAt('/coach/programs/new', routes)
@@ -74,7 +74,7 @@ describe('coach program pages', () => {
       ...loggedInAs(coachUser),
       'GET /api/v1/programs/g1': () => jsonResponse(program),
       'GET /api/v1/programs/g1/players': () => jsonResponse([samEnrolment]),
-      'GET /api/v1/sessions?program_id=g1': () => jsonResponse([]),
+      'GET /api/v1/sessions?program_id=g1&include_past=true': () => jsonResponse([]),
       'PATCH /api/v1/programs/g1/players/p1': () =>
         jsonResponse({ ...samEnrolment, status: 'INACTIVE', date_of_birth: null }),
     })
@@ -96,7 +96,7 @@ describe('coach program pages', () => {
       ...loggedInAs(coachUser),
       'GET /api/v1/programs/g1': () => jsonResponse(program),
       'GET /api/v1/programs/g1/players': () => jsonResponse(roster),
-      'GET /api/v1/sessions?program_id=g1': () => jsonResponse([]),
+      'GET /api/v1/sessions?program_id=g1&include_past=true': () => jsonResponse([]),
       'POST /api/v1/players/search': () =>
         jsonResponse([
           { id: 'p1', first_name: 'Sam', last_name: 'Taylor', parent_first_names: ['Alex'] },
