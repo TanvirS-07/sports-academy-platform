@@ -17,11 +17,12 @@ export type Booking = {
 const bookingsKey = ['bookings'] as const
 
 /** A parent's bookings for sessions that haven't finished, optionally for one child. */
-export function useBookings(playerId?: string) {
+export function useBookings(playerId?: string, { enabled = true } = {}) {
   const query = playerId ? `?player_id=${encodeURIComponent(playerId)}` : ''
   return useQuery({
     queryKey: [...bookingsKey, playerId ?? 'all'],
     queryFn: () => apiGet<Booking[]>(`/bookings${query}`),
+    enabled,
   })
 }
 
