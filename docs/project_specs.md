@@ -214,7 +214,7 @@ Payments come after the MVP. The database schema is built up over time: each tab
 * **Frontend (Vitest):** component, utility and UI behaviour tests.
 * **End-to-end (Playwright):** login, a coach creating a session, a parent booking a session, full-session behaviour, attendance, and role-based access.
 
-So far, Phases 1 to 5 cover health checks and database tests, registration, login, role checks, players, programs, enrolment, sessions, bookings, attendance, development notes and ownership checks on the backend, a test where several parents book the last places at the same moment, frontend tests for the forms, route guards, Sydney time and the player, program, session, booking, attendance and notes pages, and Playwright tests for sign-up, login, role-based access, a coach enrolling a parent's child, two parents trying to book the last place in a session, and a coach recording attendance and a note that the parent then sees.
+So far, Phases 1 to 5 cover health checks and database tests, registration, login, role checks, players, programs, enrolment, sessions, bookings, attendance, development notes and ownership checks on the backend, a test where several parents book the last places at the same moment, frontend tests for the forms, route guards, Sydney time and the player, program, session, booking, attendance, notes and calendar pages, and Playwright tests for sign-up, login, role-based access, a coach enrolling a parent's child, two parents trying to book the last place in a session, and a coach recording attendance and a note that the parent then sees.
 
 ## 10. Technology
 
@@ -248,6 +248,7 @@ The backend handles authentication and authorisation. The frontend only talks to
 | **3. Core management** (done) | Players, parent–player relationships, training programs, program enrolment (`program_players`) |
 | **4. Sessions and bookings** (done) | Sessions, session capacity, bookings, booking validation, handling concurrent bookings |
 | **5. Attendance and development** (done) | Attendance records, development notes, player progress |
+| **5b. Design refresh** (done) | Academy branding, shared UI components, calendar of upcoming sessions |
 | **6. Payments** | Invoices, payment status, payment history |
 | **7. Deployment** | Production configuration, choosing a hosting provider, Terraform, deployment pipeline, monitoring and logging |
 

@@ -47,7 +47,7 @@ backend/
 frontend/
   src/
     auth/          login state, route guards
-    components/    Layout, form fields
+    components/    Layout, buttons, panels, form fields, toasts and other shared UI
     features/      API hooks and forms for players, programs, sessions and bookings
     pages/         one component per page
     lib/           fetch wrapper (api.ts), TanStack Query setup, dates, Sydney time, error messages
@@ -78,7 +78,7 @@ Each feature is split into three parts. The router handles HTTP. The service hol
 
 ## 4. Frontend
 
-**Implemented:** Vite, React, TypeScript, Tailwind CSS and React Router. `src/lib/api.ts` is the only place that calls the backend, and it turns error responses into an `ApiError`. The home page calls both health endpoints and shows the result.
+**Implemented:** Vite, React, TypeScript, Tailwind CSS and React Router. `src/lib/api.ts` is the only place that calls the backend, and it turns error responses into an `ApiError`. The status page (`/status`) calls both health endpoints and shows the result.
 
 **Implemented in Phase 2:**
 
@@ -112,6 +112,14 @@ Each feature is split into three parts. The router handles HTTP. The service hol
 * Once a session has started, its page shows the booked players with Present, Absent and Excused buttons and one Save button, instead of the booking list.
 * The coach's player page shows the player's attendance in that program, the notes written in it, and a form to add a note. The coach can edit the notes they wrote. A note's date defaults to today in Sydney.
 * Each child's page in the parent area shows an attendance summary ("Attended 8 of 10 sessions"), the sessions it's made of, and every development note about the child.
+
+**Implemented in Phase 5b:**
+
+* The design lives in Tailwind theme tokens in `src/index.css`: navy and one gold accent, a warm off-white background, status colours, and the Inter font (self-hosted with `@fontsource-variable/inter`).
+* Shared components in `src/components/` (buttons, panels, tags, notices, toasts, an inline confirm, the page header and a session row) replace markup that was copied between pages.
+* Cancelling a booking, making a player inactive and cancelling a session ask first, in place. Saving shows a toast.
+* A calendar page (`/calendar`) shows coaches and parents their upcoming sessions as a month grid, or as a list on phones. It uses the same `GET /sessions` as the other pages, so there's no new endpoint.
+* The health check moved from the home page to `/status`, linked from the footer.
 
 ## 5. Database
 
@@ -325,5 +333,6 @@ The provider, hosting setup, secrets storage and costs will be decided in Phase 
 | **3. Core management** (done) | Players, parents, programs, `program_players`, `policies.py` | Coaches can enrol players; authorisation tests pass |
 | **4. Sessions and bookings** (done) | Sessions, session capacity, bookings, cancellation | The concurrent booking test passes |
 | **5. Attendance and development** (done) | Attendance, development notes | All MVP Playwright flows pass |
+| **5b. Design refresh** (done) | Branding, shared components, calendar | Every page uses the shared components and the Playwright flows still pass |
 | **6. Payments** | Invoices, payment status | Parents can see invoices |
 | **7. Deployment** | Choose a provider, Terraform, deployment pipeline, monitoring | The app deploys from `main` |
