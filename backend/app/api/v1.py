@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.attendance.router import router as attendance_router
 from app.auth.router import router as auth_router
 from app.bookings.router import router as bookings_router
 from app.health.router import router as health_router
@@ -20,3 +21,4 @@ api_router.include_router(sports_router)
 api_router.include_router(programs_router)
 api_router.include_router(sessions_router)
 api_router.include_router(bookings_router)
+api_router.include_router(attendance_router)
