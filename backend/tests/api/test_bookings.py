@@ -11,6 +11,7 @@ from app.sessions.models import TrainingSession
 from app.users.models import User
 from tests.helpers import (
     auth_header,
+    book,
     enrol,
     make_coach,
     make_player,
@@ -231,3 +232,34 @@ def test_parent_lists_only_their_childrens_upcoming_bookings(
 
     assert sorted(b["player"]["first_name"] for b in everyone) == ["Kim", "Sam"]
     assert [b["player"]["first_name"] for b in one_child] == ["Kim"]
+
+
+def test_making_a_player_inactive_cancels_their_upcoming_bookings(
+    client: TestClient, db_session: Session
+) -> None:
+    coach, program, session, parent, player = _setup(db_session, capacity=1)
+    past = make_session(db_session, program, starts_at=datetime.now(UTC) - timedelta(days=1))
+    book(db_session, past, player, parent)
+    other_program = make_program(db_session, coach, name="U14 Cricket Squad")
+    other_session = make_session(db_session, other_program)
+    enrol(db_session, other_program, player)
+    _book(client, parent, session, player)
+    _book(client, parent, other_session, player)
+    enrolment_url = f"/api/v1/programs/{program.id}/players/{player.id}"
+
+    response = client.patch(enrolment_url, json={"status": "INACTIVE"}, headers=auth_header(coach))
+
+    assert response.status_code == 200
+    bookings = client.get(book_url(session), headers=auth_header(coach)).json()
+    assert bookings == []
+    db_session.refresh(session)
+    assert session.booked_count == 0
+    past_bookings = client.get(book_url(past), headers=auth_header(coach)).json()
+    assert len(past_bookings) == 1
+    other = client.get(book_url(other_session), headers=auth_header(coach)).json()
+    assert len(other) == 1
+
+    # Making them active again doesn't bring the booking back, but the parent can book again.
+    client.patch(enrolment_url, json={"status": "ACTIVE"}, headers=auth_header(coach))
+    assert client.get(book_url(session), headers=auth_header(coach)).json() == []
+    assert _book(client, parent, session, player).status_code == 201
