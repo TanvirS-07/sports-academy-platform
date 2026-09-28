@@ -200,7 +200,7 @@ If a user asks for something they aren't allowed to see, the API returns `404` s
 | GET, POST | `/api/v1/programs` | Coaches: list their programs, or create one (`201`, or `422 SPORT_NOT_FOUND`) |
 | GET, PATCH | `/api/v1/programs/{id}` | Coaches: one of their programs, or edit it. `404 PROGRAM_NOT_FOUND` for anyone else's |
 | GET, POST | `/api/v1/programs/{id}/players` | The program's coach: list enrolments, or enrol a player (`201`, `409 ALREADY_ENROLLED`, or `422 PLAYER_NOT_FOUND`). Enrolling an inactive player makes them active again |
-| PATCH | `/api/v1/programs/{id}/players/{player_id}` | The program's coach: set the status to `ACTIVE` or `INACTIVE`, or `404 ENROLMENT_NOT_FOUND` |
+| PATCH | `/api/v1/programs/{id}/players/{player_id}` | The program's coach: set the status to `ACTIVE` or `INACTIVE`, or `404 ENROLMENT_NOT_FOUND`. Going inactive cancels the player's bookings for this program's sessions that haven't started; going active again doesn't bring them back |
 | GET | `/api/v1/sessions` | Coaches: their upcoming sessions (`?program_id=` and `?include_past=true` are optional). Parents: upcoming scheduled sessions in programs one of their children is actively enrolled in |
 | POST | `/api/v1/sessions` | Coaches: add a session to one of their programs (`201`, `422 INVALID_TIMES` or `422 PROGRAM_NOT_FOUND`) |
 | GET | `/api/v1/sessions/{id}` | The session's coach, or a parent with a child in the program. `404 SESSION_NOT_FOUND` for anyone else |
@@ -237,7 +237,7 @@ The database also enforces these:
 * A `CHECK (booked_count <= capacity)` constraint, so an overbooking fails even if the code has a bug.
 * A partial unique index, so a player can't have two confirmed bookings for the same session.
 
-Cancelling a booking uses the same lock and frees the place again. Editing a session's capacity and cancelling a session lock the row too, so they can't race with a booking.
+Cancelling a booking uses the same lock and frees the place again. Editing a session's capacity, cancelling a session and making a player's enrolment inactive (which cancels their upcoming bookings in that program) lock the row too, so they can't race with a booking.
 
 `tests/integration/test_booking_concurrency.py` starts eight threads, each with its own database connection, that all try to book a session with one (or three) places at the same moment. Exactly that many succeed and the rest get `SESSION_FULL`. Without the row lock, this test fails.
 

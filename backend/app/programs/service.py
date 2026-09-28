@@ -1,16 +1,24 @@
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.bookings.models import Booking, BookingStatus
 from app.core.errors import ConflictError, NotFoundError, UnprocessableError
 from app.players.models import Player
 from app.policies import can_manage_program
 from app.programs.models import EnrolmentStatus, Program, ProgramPlayer
 from app.programs.schemas import ProgramCreate, ProgramUpdate
+from app.sessions.models import SessionStatus, TrainingSession
+from app.sessions.service import lock_session
 from app.sports.models import Sport
 from app.users.models import User
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)
 
 
 def _check_sport_exists(db: Session, sport_id: uuid.UUID) -> None:
@@ -97,7 +105,48 @@ def get_enrolment(db: Session, program: Program, player_id: uuid.UUID) -> Progra
 def set_enrolment_status(
     db: Session, enrolment: ProgramPlayer, status: EnrolmentStatus
 ) -> ProgramPlayer:
+    if enrolment.status == EnrolmentStatus.ACTIVE and status == EnrolmentStatus.INACTIVE:
+        _cancel_upcoming_bookings(db, enrolment)
     enrolment.status = status
     db.commit()
     db.refresh(enrolment)
     return enrolment
+
+
+def _cancel_upcoming_bookings(db: Session, enrolment: ProgramPlayer) -> None:
+    """Cancels the player's bookings for sessions in the program that haven't started yet,
+    so their places go back to other players. Past bookings stay for attendance.
+
+    Making the player active again doesn't bring these back; a parent books again.
+    """
+    session_ids = db.scalars(
+        select(TrainingSession.id)
+        .join(Booking, Booking.session_id == TrainingSession.id)
+        .where(
+            TrainingSession.program_id == enrolment.program_id,
+            TrainingSession.status == SessionStatus.SCHEDULED,
+            TrainingSession.starts_at > _now(),
+            Booking.player_id == enrolment.player_id,
+            Booking.status == BookingStatus.CONFIRMED,
+        )
+        # Always lock sessions in the same order, so two requests can't deadlock.
+        .order_by(TrainingSession.id)
+    ).all()
+
+    for session_id in session_ids:
+        session = lock_session(db, session_id)
+        # Read the booking again now the session is locked, in case it was just cancelled.
+        booking = db.scalar(
+            select(Booking)
+            .where(
+                Booking.session_id == session.id,
+                Booking.player_id == enrolment.player_id,
+                Booking.status == BookingStatus.CONFIRMED,
+            )
+            .execution_options(populate_existing=True)
+        )
+        if booking is None or session.status != SessionStatus.SCHEDULED:
+            continue
+        booking.status = BookingStatus.CANCELLED
+        booking.cancelled_at = _now()
+        session.booked_count -= 1
