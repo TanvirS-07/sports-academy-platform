@@ -1,6 +1,6 @@
 # Sports Academy Management Platform: Project Specification
 
-This document describes what the platform should do. Most of it is planned work. Phase 1 (foundation), Phase 2 (authentication, including refresh tokens) and Phase 3 (players, programs and enrolment) are done. The features below are added in later phases (see [section 12](#12-development-phases)).
+This document describes what the platform should do. Phases 1 to 5 are done, which covers the MVP: authentication, players, programs and enrolment, sessions and bookings, and attendance and development notes. Payments and player logins are still to come. The features below are added in later phases (see [section 12](#12-development-phases)).
 
 ## 1. Overview
 
@@ -133,9 +133,15 @@ It must also handle two people booking at the same time, so session capacity is 
 
 Coaches record attendance for players in their sessions as **Present**, **Absent** or **Excused**. Each record belongs to one player and one session.
 
+Only players with a confirmed booking can be marked, and attendance opens when the session starts. The coach can change it later.
+
 ### 4.7 Player development
 
 Coaches record development notes for players. A note can include skills being worked on, areas for improvement, progress observations, the date and the coach who wrote it. Parents and players can only see notes they're allowed to access.
+
+Each note belongs to one of the coach's programs. A player's parents see every note about them. A coach only sees the notes written in their own programs, not notes another coach wrote about the same player. Notes can be edited by the coach who wrote them but aren't deleted.
+
+A player's progress is shown as their attendance summary and their notes over time. There are no ratings or scores, because those would depend on the sport.
 
 ### 4.8 Payments (after the MVP)
 
@@ -208,7 +214,7 @@ Payments come after the MVP. The database schema is built up over time: each tab
 * **Frontend (Vitest):** component, utility and UI behaviour tests.
 * **End-to-end (Playwright):** login, a coach creating a session, a parent booking a session, full-session behaviour, attendance, and role-based access.
 
-So far, Phases 1 to 4 cover health checks and database tests, registration, login, role checks, players, programs, enrolment, sessions, bookings and ownership checks on the backend, a test where several parents book the last places at the same moment, frontend tests for the forms, route guards, Sydney time and the player, program, session and booking pages, and Playwright tests for sign-up, login, role-based access, a coach enrolling a parent's child, and two parents trying to book the last place in a session.
+So far, Phases 1 to 5 cover health checks and database tests, registration, login, role checks, players, programs, enrolment, sessions, bookings, attendance, development notes and ownership checks on the backend, a test where several parents book the last places at the same moment, frontend tests for the forms, route guards, Sydney time and the player, program, session, booking, attendance and notes pages, and Playwright tests for sign-up, login, role-based access, a coach enrolling a parent's child, two parents trying to book the last place in a session, and a coach recording attendance and a note that the parent then sees.
 
 ## 10. Technology
 
@@ -241,7 +247,7 @@ The backend handles authentication and authorisation. The frontend only talks to
 | **2b. Refresh tokens** (done) | Refresh tokens, rotation, revocation (logout) |
 | **3. Core management** (done) | Players, parent–player relationships, training programs, program enrolment (`program_players`) |
 | **4. Sessions and bookings** (done) | Sessions, session capacity, bookings, booking validation, handling concurrent bookings |
-| **5. Attendance and development** | Attendance records, development notes, player progress |
+| **5. Attendance and development** (done) | Attendance records, development notes, player progress |
 | **6. Payments** | Invoices, payment status, payment history |
 | **7. Deployment** | Production configuration, choosing a hosting provider, Terraform, deployment pipeline, monitoring and logging |
 

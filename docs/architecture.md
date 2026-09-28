@@ -57,7 +57,7 @@ docs/              specification, architecture, ADRs
 .github/           CI workflow, Dependabot
 ```
 
-Each backend feature has its own folder with `router.py`, `schemas.py`, `models.py` and `service.py` (`app/auth/`, `app/users/`, `app/players/`, `app/sports/`, `app/programs/`, `app/sessions/` and `app/bookings/` so far). Ownership checks are in `app/policies.py`. On the frontend, `src/features/` holds the API hooks and forms for each feature, and `src/pages/` holds the pages.
+Each backend feature has its own folder with `router.py`, `schemas.py`, `models.py` and `service.py` (`app/auth/`, `app/users/`, `app/players/`, `app/sports/`, `app/programs/`, `app/sessions/`, `app/bookings/`, `app/attendance/` and `app/notes/`). Ownership checks are in `app/policies.py`. On the frontend, `src/features/` holds the API hooks and forms for each feature, and `src/pages/` holds the pages.
 
 ## 3. Backend
 
@@ -106,9 +106,16 @@ Each feature is split into three parts. The router handles HTTP. The service hol
 * Coaches see a program's upcoming sessions on the program page, can add a session, and have a page for each session with the booked players, an edit form, a button to cancel a booking and a button to cancel the session (which asks first).
 * Parents have a "Sessions" page with the upcoming sessions in their children's programs, the places left, and a Book or Cancel button for each child in that program. Each child's page lists their upcoming bookings.
 
+**Implemented in Phase 5:**
+
+* The program page also lists the last 10 past sessions, and each player's name links to a coach page for that player.
+* Once a session has started, its page shows the booked players with Present, Absent and Excused buttons and one Save button, instead of the booking list.
+* The coach's player page shows the player's attendance in that program, the notes written in it, and a form to add a note. The coach can edit the notes they wrote. A note's date defaults to today in Sydney.
+* Each child's page in the parent area shows an attendance summary ("Attended 8 of 10 sessions"), the sessions it's made of, and every development note about the child.
+
 ## 5. Database
 
-**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. The `users` table was added in Phase 2, `refresh_tokens` in Phase 2b, and `players`, `parent_players`, `sports`, `programs` and `program_players` in Phase 3, and `training_sessions` and `bookings` in Phase 4.
+**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. The `users` table was added in Phase 2, `refresh_tokens` in Phase 2b, and `players`, `parent_players`, `sports`, `programs` and `program_players` in Phase 3, `training_sessions` and `bookings` in Phase 4, and `attendance` and `development_notes` in Phase 5.
 
 **Planned:** tables are added in the phase that needs them.
 
@@ -123,8 +130,8 @@ Each feature is split into three parts. The router handles HTTP. The service hol
 | 3 (done) | `program_players` | enrolment; primary key `(program_id, player_id)`, status ACTIVE / INACTIVE; enrolments are made inactive, not deleted |
 | 4 (done) | `training_sessions` | belongs to a program (the coach comes from the program); times stored as `timestamptz`; `capacity` and `booked_count` with CHECK constraints (capacity above 0, booked count between 0 and capacity, end after start); status SCHEDULED / CANCELLED |
 | 4 (done) | `bookings` | player, session and the parent who booked; status CONFIRMED / CANCELLED; a partial unique index allows one confirmed booking per player per session; cancelled bookings are kept |
-| 5 | `attendance` | one record per player per session: PRESENT / ABSENT / EXCUSED |
-| 5 | `development_notes` | written by a coach about a player |
+| 5 (done) | `attendance` | one record per player per session (a unique constraint), PRESENT / ABSENT / EXCUSED, and the coach who recorded it; changing it updates the same row |
+| 5 (done) | `development_notes` | a player, the program it was written in, the coach who wrote it, a date, and skills, improvements and progress text; a CHECK makes sure at least one of the three isn't empty |
 | 6 | invoices / payments | after the MVP; no payment columns in the core tables |
 
 ```text
@@ -137,7 +144,7 @@ player login (users) ── players   (optional, players.user_id)
 
 * **Enrolment and bookings are separate.** An enrolment (`program_players`) is the lasting link between a player and a program. It decides which players a coach manages. A booking is for one specific session.
 * **Times** are stored in UTC and shown in Sydney time on the frontend. The API only accepts times with an offset (for example `+11:00` or `Z`) and always returns UTC, so the backend never guesses a time zone.
-* **Nothing is deleted.** Sessions and bookings are cancelled instead, so attendance in Phase 5 has something to point at.
+* **Nothing is deleted.** Sessions and bookings are cancelled instead, so attendance has something to point at. Development notes are edited, not deleted.
 * **The table is called `training_sessions`** so it isn't confused with a database session.
 
 ## 6. Authentication (Phase 2 and 2b done)
@@ -160,16 +167,18 @@ player login (users) ── players   (optional, players.user_id)
   * Old token rows aren't cleaned up yet. That's fine at this size, and a cleanup job can be added later.
 * **Accounts:** only parents can sign up publicly. Coaches are created with `scripts/create_coach.py`, and player logins are added later by a parent.
 
-## 7. Authorisation (done in Phases 2 to 4)
+## 7. Authorisation (done in Phases 2 to 5)
 
 There are two checks:
 
 1. **Role check:** a FastAPI dependency, for example `require_role(Role.COACH)`. A wrong role returns `403`.
-2. **Ownership check:** functions in `app/policies.py`. There's `can_act_for_player` (a parent linked to the player), `can_manage_program` (the coach who owns the program), `can_manage_session` (the coach who owns the session's program) and `can_view_session` (that coach, or a parent with a child actively enrolled in the program).
+2. **Ownership check:** functions in `app/policies.py`. There's `can_act_for_player` (a parent linked to the player), `can_manage_program` (the coach who owns the program), `can_manage_session` (the coach who owns the session's program), `can_view_session` (that coach, or a parent with a child actively enrolled in the program) and `can_view_player_records` (for attendance and notes: the player's parents, or a coach with the player in one of their programs, active or not).
 
 If a user asks for something they aren't allowed to see, the API returns `404` so it doesn't reveal that the record exists. List endpoints only return the user's own records.
 
-**Children's details:** a player's date of birth is only returned to their parents and to the coach of a program they're actively enrolled in. Coaches find players to enrol with a name search, which returns the name and the parents' first names only. The search is a `POST` so children's names don't end up in URLs or server logs. Session and booking responses only include the player's name, never their date of birth.
+**Children's details:** a player's date of birth is only returned to their parents and to the coach of a program they're actively enrolled in. Coaches find players to enrol with a name search, which returns the name and the parents' first names only. The search is a `POST` so children's names don't end up in URLs or server logs. Session, booking, attendance and note responses only include the player's name, never their date of birth.
+
+**Attendance and notes:** parents see all of their child's attendance and notes. A coach only sees the attendance and notes from their own programs, even when the child is in another coach's program too. A coach keeps seeing their own records after a player's enrolment goes inactive, but can't add new notes.
 
 ## 8. REST API
 
@@ -201,14 +210,13 @@ If a user asks for something they aren't allowed to see, the API returns `404` s
 | POST | `/api/v1/sessions/{id}/bookings` | Parents: book one of their children, `{"player_id": "..."}`. `201`, `409 SESSION_FULL`, `409 ALREADY_BOOKED`, `409 SESSION_NOT_BOOKABLE`, `422 PLAYER_NOT_ENROLLED` or `422 PLAYER_NOT_FOUND` |
 | GET | `/api/v1/bookings` | Parents: their children's bookings for sessions that haven't finished (`?player_id=` is optional), including cancelled ones |
 | POST | `/api/v1/bookings/{id}/cancel` | The child's parent or the session's coach, before the session starts. `409 BOOKING_NOT_CANCELLABLE` if it's already cancelled or the session has started |
+| GET | `/api/v1/sessions/{id}/attendance` | The session's coach: every player with a confirmed booking and their status, or `null` if not marked yet |
+| PUT | `/api/v1/sessions/{id}/attendance` | The session's coach: `{"records": [{"player_id": "...", "status": "PRESENT"}]}`. Players left out keep what they had. `409 ATTENDANCE_NOT_OPEN` before the start, `409 SESSION_CANCELLED`, or `422 PLAYER_NOT_BOOKED` |
+| GET | `/api/v1/players/{id}/attendance` | The player's parents, or a coach for their own programs (`?program_id=` is optional). A summary (`present`, `absent`, `excused`, `total`) and the records, newest first |
+| GET, POST | `/api/v1/players/{id}/development-notes` | GET: the player's parents, or a coach for their own programs (`?program_id=` is optional), newest first. POST: a coach adds a note in one of their programs (`201`, `422 PROGRAM_NOT_FOUND` or `422 PLAYER_NOT_ENROLLED`) |
+| PATCH | `/api/v1/development-notes/{id}` | The coach who wrote the note. `404 NOTE_NOT_FOUND` for anyone else, `422 NOTE_EMPTY` if every text field would be empty |
 
 FastAPI also generates API docs at `/docs`.
-
-**Planned:**
-
-| Phase | Endpoints |
-|---|---|
-| 5 | `/sessions/{id}/attendance`, `/players/{id}/attendance`, `/players/{id}/development-notes` |
 
 Session responses include `capacity`, `booked` and `available`, so the frontend doesn't need to calculate them.
 
@@ -247,14 +255,16 @@ Cancelling a booking uses the same lock and frees the place again. Editing a ses
   * Refresh tokens: the cookie flags, rotation, expiry, reuse detection, inactive users and logout.
   * Players, programs and enrolment, including checks that parents and coaches can't see or change each other's records, that the wrong role gets `403`, and that date of birth isn't shown in search results or for inactive enrolments.
   * Sessions and bookings: validation, every booking rule, who can see and change what, and the database constraints. A concurrency test (above) checks that capacity is never exceeded.
-* **Frontend (Vitest + React Testing Library):** the API client, the home page, the login and register forms, the route guards, restoring the login on load, refresh-and-retry, the parent player pages and coach program pages, the Sydney time conversion (including both daylight saving changes), the coach session pages and the parent booking pages.
-* **End-to-end (Playwright):** the home page health checks, the not-found page, parent registration, login and logout, coach login, a parent being kept out of the coach area, staying logged in after a reload, staying logged out after logging out, a coach enrolling a parent's child in a program, which the parent then sees, and two parents trying to book the last place in a session.
+  * Attendance and development notes: when attendance opens, only booked players, changing a record, the note rules, which coach sees what, and the database constraints.
+  * The script that moves a session into the past for the end-to-end test.
+* **Frontend (Vitest + React Testing Library):** the API client, the home page, the login and register forms, the route guards, restoring the login on load, refresh-and-retry, the parent player pages and coach program pages, the Sydney time conversion (including both daylight saving changes), the coach session pages, the parent booking pages, the attendance form, the note form and the progress sections.
+* **End-to-end (Playwright):** the home page health checks, the not-found page, parent registration, login and logout, coach login, a parent being kept out of the coach area, staying logged in after a reload, staying logged out after logging out, a coach enrolling a parent's child in a program, which the parent then sees, two parents trying to book the last place in a session, and a coach marking a child present and writing a note, which the parent then sees (and a parent being kept out of the coach's session page).
+
+The attendance test needs a session that has already happened, but the API only creates future sessions. The test books a session first and then runs `scripts/move_session_to_past.py` through `docker compose exec`, which refuses to run in production.
 
 Each backend test runs inside a transaction that's rolled back afterwards, so tests don't share data. The concurrency test is the exception: it needs several connections, so it commits its data and deletes it afterwards.
 
 Tests use real PostgreSQL instead of SQLite, because later features depend on row locks and constraints that SQLite handles differently. As a safety measure, the test suite won't run against a database whose name doesn't end in `_test`.
-
-**Planned:** tests for attendance and development notes in Phase 5.
 
 ## 11. Security
 
@@ -314,6 +324,6 @@ The provider, hosting setup, secrets storage and costs will be decided in Phase 
 | **2b. Refresh tokens** (done) | `refresh_tokens`, rotation, logout | Refresh and revocation tests pass |
 | **3. Core management** (done) | Players, parents, programs, `program_players`, `policies.py` | Coaches can enrol players; authorisation tests pass |
 | **4. Sessions and bookings** (done) | Sessions, session capacity, bookings, cancellation | The concurrent booking test passes |
-| **5. Attendance and development** | Attendance, development notes | All MVP Playwright flows pass |
+| **5. Attendance and development** (done) | Attendance, development notes | All MVP Playwright flows pass |
 | **6. Payments** | Invoices, payment status | Parents can see invoices |
 | **7. Deployment** | Choose a provider, Terraform, deployment pipeline, monitoring | The app deploys from `main` |
