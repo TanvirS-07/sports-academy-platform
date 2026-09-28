@@ -3,6 +3,7 @@ import { Outlet, Route, Routes } from 'react-router'
 import { RequireAuth, RequireRole } from './auth/guards'
 import { Layout } from './components/Layout'
 import { AccountPage } from './pages/AccountPage'
+import { CalendarPage } from './pages/CalendarPage'
 import { CoachPlayerPage } from './pages/CoachPlayerPage'
 import { CoachSessionPage } from './pages/CoachSessionPage'
 import { CoachPage } from './pages/CoachPage'
@@ -55,6 +56,14 @@ export function App() {
           <Route path="players/:playerId" element={<PlayerPage />} />
           <Route path="sessions" element={<ParentSessionsPage />} />
         </Route>
+        <Route
+          path="calendar"
+          element={
+            <RequireRole roles={['COACH', 'PARENT']}>
+              <CalendarPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="account"
           element={

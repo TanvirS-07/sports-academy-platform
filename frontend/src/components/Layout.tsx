@@ -10,12 +10,14 @@ function navFor(user: User | null): NavItem[] {
   if (user?.role === 'COACH') {
     return [
       { label: 'Programs', to: '/coach' },
+      { label: 'Calendar', to: '/calendar' },
     ]
   }
   if (user?.role === 'PARENT') {
     return [
       { label: 'Home', to: '/parent', end: true },
       { label: 'Sessions', to: '/parent/sessions' },
+      { label: 'Calendar', to: '/calendar' },
     ]
   }
   return []
