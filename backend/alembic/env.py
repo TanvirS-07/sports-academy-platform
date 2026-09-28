@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, pool
 
 # Every models module is imported so autogenerate can see the tables.
 from app.auth import models as auth_models  # noqa: F401
+from app.bookings import models as bookings_models  # noqa: F401
 from app.core.config import get_settings
 from app.db.base import Base
 from app.players import models as players_models  # noqa: F401

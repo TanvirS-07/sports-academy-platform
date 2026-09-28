@@ -1,9 +1,10 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from app.bookings.models import Booking, BookingStatus
 from app.core.errors import ConflictError, NotFoundError, UnprocessableError
 from app.players.models import ParentPlayer
 from app.policies import can_manage_program, can_manage_session, can_view_session
@@ -133,7 +134,14 @@ def cancel_session(db: Session, session: TrainingSession) -> TrainingSession:
     session = lock_session(db, session.id)
     _check_editable(session)
 
+    # Its bookings are cancelled too, so the data matches what really happened.
+    db.execute(
+        update(Booking)
+        .where(Booking.session_id == session.id, Booking.status == BookingStatus.CONFIRMED)
+        .values(status=BookingStatus.CANCELLED, cancelled_at=_now())
+    )
     session.status = SessionStatus.CANCELLED
+    session.booked_count = 0
     db.commit()
     db.refresh(session)
     return session
