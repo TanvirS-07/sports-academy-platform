@@ -1,1 +1,68 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/*
+ * Design tokens. Pages use these names (bg-brand, text-ink-muted, border-line…)
+ * instead of raw Tailwind colours, so the look can be changed in one place.
+ */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /* Navy from the academy's kit, and one gold accent used sparingly. */
+  --color-brand: #0b1f3a;
+  --color-brand-hover: #16325a;
+  --color-brand-soft: #e8edf5;
+  --color-accent: #e0a526;
+
+  /* Surfaces and text. */
+  --color-canvas: #f6f5f2;
+  --color-surface: #ffffff;
+  --color-subtle: #f3f2ee;
+  --color-line: #e3e1dc;
+  --color-line-strong: #cfccc5;
+  /* Input borders: 3:1 against white and the page, so fields are easy to find. */
+  --color-control: #8f8a82;
+  --color-ink: #1c1b19;
+  --color-ink-muted: #57534e;
+  --color-ink-faint: #6f6a64;
+
+  /* Status colours. Text shades pass WCAG AA on their soft backgrounds. */
+  --color-success: #1f6b3a;
+  --color-success-soft: #e8f3eb;
+  --color-warning: #8a5300;
+  --color-warning-soft: #fdf2dc;
+  --color-danger: #b42318;
+  --color-danger-hover: #912018;
+  --color-danger-soft: #fdecea;
+  --color-info: #1d4f91;
+  --color-info-soft: #e8effa;
+
+  /* Program colours for the calendar. */
+  --color-program-1: #0b1f3a;
+  --color-program-2: #1f6b3a;
+  --color-program-3: #b25e09;
+  --color-program-4: #7a2e8e;
+}
+
+@layer base {
+  html {
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+}
