@@ -34,6 +34,7 @@ A coach only sees the attendance and notes from their own programs. If a child i
 
 Screenshots from Phase 2 are in [docs/screenshots/phase-2](docs/screenshots/phase-2/).
 Screenshots from Phase 4 are in [docs/screenshots/phase-4](docs/screenshots/phase-4/).
+Screenshots from Phase 5 are in [docs/screenshots/phase-5](docs/screenshots/phase-5/).
 
 Everything else in this README describes planned features. The development phases are listed in [docs/project_specs.md](docs/project_specs.md#12-development-phases).
 
