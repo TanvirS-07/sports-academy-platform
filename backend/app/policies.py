@@ -9,7 +9,8 @@ from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
 from app.players.models import ParentPlayer, Player
-from app.programs.models import Program
+from app.programs.models import EnrolmentStatus, Program, ProgramPlayer
+from app.sessions.models import TrainingSession
 from app.users.models import Role, User
 
 
@@ -31,3 +32,28 @@ def can_act_for_player(db: Session, user: User, player: Player) -> bool:
 def can_manage_program(user: User, program: Program) -> bool:
     """Coaches manage the programs they own."""
     return user.role == Role.COACH and program.coach_id == user.id
+
+
+def can_manage_session(user: User, session: TrainingSession) -> bool:
+    """Coaches manage the sessions in their own programs."""
+    return can_manage_program(user, session.program)
+
+
+def can_view_session(db: Session, user: User, session: TrainingSession) -> bool:
+    """The session's coach, and parents with a child actively enrolled in its program."""
+    if can_manage_session(user, session):
+        return True
+    if user.role != Role.PARENT:
+        return False
+    return bool(
+        db.scalar(
+            select(
+                exists().where(
+                    ParentPlayer.parent_id == user.id,
+                    ProgramPlayer.player_id == ParentPlayer.player_id,
+                    ProgramPlayer.program_id == session.program_id,
+                    ProgramPlayer.status == EnrolmentStatus.ACTIVE,
+                )
+            )
+        )
+    )
