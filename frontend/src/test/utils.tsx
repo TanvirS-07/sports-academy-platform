@@ -94,3 +94,10 @@ export const parentUser = {
 export const coachUser = { ...parentUser, id: '22222222-2222-2222-2222-222222222222', email: 'coach@example.com', first_name: 'Sam', role: 'COACH' as const }
 
 export const tokenResponse = { access_token: 'test-token', token_type: 'bearer', expires_in: 900 }
+
+/** Handlers for a child's page when they have no attendance or development notes yet. */
+export const noProgressYet: Record<string, Handler> = {
+  'GET /api/v1/players/p1/attendance': () =>
+    jsonResponse({ summary: { present: 0, absent: 0, excused: 0, total: 0 }, records: [] }),
+  'GET /api/v1/players/p1/development-notes': () => jsonResponse([]),
+}
