@@ -3,11 +3,13 @@ import { Outlet, Route, Routes } from 'react-router'
 import { RequireAuth, RequireRole } from './auth/guards'
 import { Layout } from './components/Layout'
 import { AccountPage } from './pages/AccountPage'
+import { CoachSessionPage } from './pages/CoachSessionPage'
 import { CoachPage } from './pages/CoachPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NewPlayerPage } from './pages/NewPlayerPage'
 import { NewProgramPage } from './pages/NewProgramPage'
+import { NewSessionPage } from './pages/NewSessionPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ParentPage } from './pages/ParentPage'
 import { PlayerPage } from './pages/PlayerPage'
@@ -32,6 +34,8 @@ export function App() {
           <Route index element={<CoachPage />} />
           <Route path="programs/new" element={<NewProgramPage />} />
           <Route path="programs/:programId" element={<ProgramPage />} />
+          <Route path="programs/:programId/sessions/new" element={<NewSessionPage />} />
+          <Route path="sessions/:sessionId" element={<CoachSessionPage />} />
         </Route>
         <Route
           path="parent"

@@ -5,13 +5,17 @@ import { QueryState } from '../components/QueryState'
 import { useProgram, useRoster, useSetEnrolmentStatus, useUpdateProgram } from '../features/programs/api'
 import { EnrolPlayer } from '../features/programs/EnrolPlayer'
 import { ProgramForm } from '../features/programs/ProgramForm'
+import { useSessions } from '../features/sessions/api'
+import { placesText } from '../features/sessions/places'
 import { formatDate } from '../lib/dates'
 import { errorMessage } from '../lib/errors'
+import { formatSessionTime } from '../lib/sydneyTime'
 
 export function ProgramPage() {
   const { programId = '' } = useParams()
   const program = useProgram(programId)
   const roster = useRoster(programId)
+  const sessions = useSessions(programId)
   const updateProgram = useUpdateProgram(programId)
   const setStatus = useSetEnrolmentStatus(programId)
   const [editing, setEditing] = useState(false)
@@ -63,6 +67,28 @@ export function ProgramPage() {
               </>
             )}
           </div>
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Upcoming sessions</h2>
+              <Link to={`/coach/programs/${programId}/sessions/new`}
+                className="rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800">
+                New session
+              </Link>
+            </div>
+            <QueryState isPending={sessions.isPending} error={sessions.error} />
+            {sessions.data?.length === 0 && <p className="text-slate-600">No upcoming sessions.</p>}
+            <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+              {sessions.data?.map((session) => (
+                <li key={session.id}>
+                  <Link to={`/coach/sessions/${session.id}`} className="block px-4 py-3 hover:bg-slate-50">
+                    <p className="font-medium">{formatSessionTime(session.starts_at, session.ends_at)}</p>
+                    <p className="text-sm text-slate-500">{session.location} · {placesText(session)}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-semibold">Players</h2>
