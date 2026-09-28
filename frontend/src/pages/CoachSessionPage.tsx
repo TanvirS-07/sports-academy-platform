@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { QueryState } from '../components/QueryState'
+import { useSaveAttendance, useSessionAttendance } from '../features/attendance/api'
+import { AttendanceForm } from '../features/attendance/AttendanceForm'
 import { useCancelBooking } from '../features/bookings/api'
 import { useCancelSession, useSession, useSessionBookings, useUpdateSession } from '../features/sessions/api'
 import { placesText } from '../features/sessions/places'
@@ -20,7 +22,12 @@ export function CoachSessionPage() {
   const [confirmingCancel, setConfirmingCancel] = useState(false)
 
   const actionError = cancelSession.error ?? cancelBooking.error
-  const upcoming = session.data?.status === 'SCHEDULED' && new Date(session.data.starts_at) > new Date()
+  const scheduled = session.data?.status === 'SCHEDULED'
+  const upcoming = scheduled && new Date(session.data?.starts_at ?? 0) > new Date()
+  // Attendance opens when the session starts. Bookings can't change after that.
+  const started = scheduled && !upcoming
+  const attendance = useSessionAttendance(sessionId, started)
+  const saveAttendance = useSaveAttendance(sessionId)
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -64,29 +71,43 @@ export function CoachSessionPage() {
             </p>
           )}
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Booked players</h2>
-            <QueryState isPending={bookings.isPending} error={bookings.error} />
-            {bookings.data?.length === 0 && <p className="text-slate-600">Nobody has booked yet.</p>}
-            <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
-              {bookings.data?.map((booking) => {
-                const name = `${booking.player.first_name} ${booking.player.last_name}`
-                return (
-                  <li key={booking.id} className="flex items-center justify-between px-4 py-3">
-                    <span className="font-medium">{name}</span>
-                    {upcoming && (
-                      <button type="button" disabled={cancelBooking.isPending}
-                        onClick={() => cancelBooking.mutate(booking.id)}
-                        aria-label={`Cancel booking: ${name}`}
-                        className="text-sm font-medium text-red-700 hover:underline disabled:opacity-60">
-                        Cancel booking
-                      </button>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
+          {started && (
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold">Attendance</h2>
+              <QueryState isPending={attendance.isPending} error={attendance.error} />
+              {attendance.data?.length === 0 && <p className="text-slate-600">Nobody was booked into this session.</p>}
+              {attendance.data && attendance.data.length > 0 && (
+                <AttendanceForm rows={attendance.data} onSave={(records) => saveAttendance.mutateAsync(records)} />
+              )}
+            </section>
+          )}
+
+          {!started && (
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold">Booked players</h2>
+              <QueryState isPending={bookings.isPending} error={bookings.error} />
+              {bookings.data?.length === 0 && <p className="text-slate-600">Nobody has booked yet.</p>}
+              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+                {bookings.data?.map((booking) => {
+                  const name = `${booking.player.first_name} ${booking.player.last_name}`
+                  return (
+                    <li key={booking.id} className="flex items-center justify-between px-4 py-3">
+                      <span className="font-medium">{name}</span>
+                      {upcoming && (
+                        <button type="button" disabled={cancelBooking.isPending}
+                          onClick={() => cancelBooking.mutate(booking.id)}
+                          aria-label={`Cancel booking: ${name}`}
+                          className="text-sm font-medium text-red-700 hover:underline disabled:opacity-60">
+                          Cancel booking
+                        </button>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+              {upcoming && <p className="text-sm text-slate-500">You can mark attendance once the session starts.</p>}
+            </section>
+          )}
 
           {upcoming && (
             <section className="space-y-2">

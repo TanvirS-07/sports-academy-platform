@@ -56,7 +56,7 @@ describe('coach session pages', () => {
       ...loggedInAs(coachUser),
       'GET /api/v1/programs/g1': () => jsonResponse(program),
       'GET /api/v1/programs/g1/players': () => jsonResponse([]),
-      'GET /api/v1/sessions?program_id=g1': () => jsonResponse([session]),
+      'GET /api/v1/sessions?program_id=g1&include_past=true': () => jsonResponse([session]),
     })
 
     renderAt('/coach/programs/g1', routes)

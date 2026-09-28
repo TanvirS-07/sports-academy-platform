@@ -139,3 +139,7 @@ export function apiPost<T>(path: string, body: unknown, init?: RequestInit): Pro
 export function apiPatch<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
   return request<T>('PATCH', path, body, init)
 }
+
+export function apiPut<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+  return request<T>('PUT', path, body, init)
+}
