@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, Response, status
+from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.auth import service
 from app.auth.cookies import REFRESH_COOKIE_NAME, clear_refresh_cookie, set_refresh_cookie
-from app.auth.rate_limit import login_rate_limiter
+from app.auth.rate_limit import ip_login_rate_limiter, login_rate_limiter
 from app.auth.refresh_tokens import (
     INVALID_REFRESH_TOKEN_MESSAGE,
     issue_refresh_token,
@@ -49,9 +49,13 @@ def register(data: RegisterRequest, db: Annotated[Session, Depends(get_db)]) -> 
     summary="Log in and get an access token",
 )
 def login(
-    data: LoginRequest, response: Response, db: Annotated[Session, Depends(get_db)]
+    data: LoginRequest,
+    request: Request,
+    response: Response,
+    db: Annotated[Session, Depends(get_db)],
 ) -> TokenResponse:
-    if login_rate_limiter.is_blocked(data.email):
+    ip = request.client.host if request.client else "unknown"
+    if login_rate_limiter.is_blocked(data.email) or ip_login_rate_limiter.is_blocked(ip):
         raise TooManyRequestsError(
             "Too many failed login attempts. Try again in a minute.",
             code="TOO_MANY_LOGIN_ATTEMPTS",
@@ -61,8 +65,11 @@ def login(
         user = service.authenticate(db, data)
     except AppError:
         login_rate_limiter.record_failure(data.email)
+        ip_login_rate_limiter.record_failure(ip)
         raise
 
+    # Only the email count is reset. Otherwise logging in to your own account
+    # would clear the count for an address that's guessing other people's.
     login_rate_limiter.reset(data.email)
     set_refresh_cookie(response, issue_refresh_token(db, user))
     access_token = create_access_token(user.id, user.role.value)

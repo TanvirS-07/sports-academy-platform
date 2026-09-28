@@ -48,3 +48,23 @@ def test_reset_clears_failures() -> None:
     limiter.reset("a@example.com")
 
     assert not limiter.is_blocked("a@example.com")
+
+
+def test_checking_an_email_does_not_store_it() -> None:
+    limiter = FailedLoginLimiter(max_failures=1, window_seconds=60, clock=FakeClock())
+
+    limiter.is_blocked("a@example.com")
+
+    assert limiter._failures == {}
+
+
+def test_old_keys_are_forgotten_once_there_are_too_many() -> None:
+    clock = FakeClock()
+    limiter = FailedLoginLimiter(max_failures=1, window_seconds=60, clock=clock, max_keys=2)
+    limiter.record_failure("a@example.com")
+    limiter.record_failure("b@example.com")
+
+    clock.now += 61
+    limiter.record_failure("c@example.com")
+
+    assert set(limiter._failures) == {"c@example.com"}
