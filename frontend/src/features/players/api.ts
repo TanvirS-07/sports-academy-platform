@@ -27,11 +27,15 @@ export function usePlayers() {
   return useQuery({ queryKey: playersKey, queryFn: () => apiGet<Player[]>('/players') })
 }
 
-export function usePlayer(playerId: string) {
-  return useQuery({
+export function playerQuery(playerId: string) {
+  return {
     queryKey: [...playersKey, playerId],
     queryFn: () => apiGet<PlayerDetail>(`/players/${playerId}`),
-  })
+  }
+}
+
+export function usePlayer(playerId: string) {
+  return useQuery(playerQuery(playerId))
 }
 
 export function useCreatePlayer() {

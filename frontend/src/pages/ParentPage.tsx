@@ -11,9 +11,15 @@ export function ParentPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold">Parent area</h1>
-        <p className="text-slate-600">Welcome, {user?.first_name}.</p>
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold">Parent area</h1>
+          <p className="text-slate-600">Welcome, {user?.first_name}.</p>
+        </div>
+        <Link to="/parent/sessions"
+          className="rounded-md border border-emerald-700 px-3 py-1.5 text-sm font-medium text-emerald-800 hover:bg-emerald-50">
+          Book sessions
+        </Link>
       </div>
 
       <section className="space-y-3">

@@ -12,6 +12,7 @@ import { NewProgramPage } from './pages/NewProgramPage'
 import { NewSessionPage } from './pages/NewSessionPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ParentPage } from './pages/ParentPage'
+import { ParentSessionsPage } from './pages/ParentSessionsPage'
 import { PlayerPage } from './pages/PlayerPage'
 import { ProgramPage } from './pages/ProgramPage'
 import { RegisterPage } from './pages/RegisterPage'
@@ -48,6 +49,7 @@ export function App() {
           <Route index element={<ParentPage />} />
           <Route path="players/new" element={<NewPlayerPage />} />
           <Route path="players/:playerId" element={<PlayerPage />} />
+          <Route path="sessions" element={<ParentSessionsPage />} />
         </Route>
         <Route
           path="account"
