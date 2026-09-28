@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { setAccessToken } from '../lib/api'
-import { callsTo, firstCallTo, jsonResponse, loggedInAs, mockBackend, parentUser, renderAt } from '../test/utils'
+import { callsTo, firstCallTo, jsonResponse, loggedInAs, mockBackend, noProgressYet, parentUser, renderAt } from '../test/utils'
 import { ParentSessionsPage } from './ParentSessionsPage'
 import { PlayerPage } from './PlayerPage'
 
@@ -43,6 +43,7 @@ function familyHandlers() {
     ...loggedInAs(parentUser),
     'GET /api/v1/players': () => jsonResponse([sam, kim]),
     'GET /api/v1/players/p1': () => jsonResponse({ ...sam, programs: [program] }),
+    ...noProgressYet,
     // Kim isn't in the program, so she can't book this session.
     'GET /api/v1/players/p2': () => jsonResponse({ ...kim, programs: [] }),
   }
@@ -108,6 +109,7 @@ describe('parent booking pages', () => {
     const fetchMock = mockBackend({
       ...loggedInAs(parentUser),
       'GET /api/v1/players/p1': () => jsonResponse({ ...sam, programs: [program] }),
+      ...noProgressYet,
       'GET /api/v1/bookings?player_id=p1': () => jsonResponse(bookings),
       'POST /api/v1/bookings/b1/cancel': () => {
         bookings = [booking('CANCELLED')]
@@ -126,6 +128,7 @@ describe('parent booking pages', () => {
     mockBackend({
       ...loggedInAs(parentUser),
       'GET /api/v1/players/p1': () => jsonResponse({ ...sam, programs: [program] }),
+      ...noProgressYet,
       'GET /api/v1/bookings?player_id=p1': () =>
         jsonResponse([booking('CANCELLED', { status: 'CANCELLED', booked: 0, available: 10 })]),
     })

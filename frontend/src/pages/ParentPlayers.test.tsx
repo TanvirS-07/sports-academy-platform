@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { setAccessToken } from '../lib/api'
-import { firstCallTo, jsonResponse, loggedInAs, mockBackend, parentUser, renderAt } from '../test/utils'
+import { firstCallTo, jsonResponse, loggedInAs, mockBackend, noProgressYet, parentUser, renderAt } from '../test/utils'
 import { NewPlayerPage } from './NewPlayerPage'
 import { ParentPage } from './ParentPage'
 import { PlayerPage } from './PlayerPage'
@@ -40,6 +40,7 @@ describe('parent player pages', () => {
       'POST /api/v1/players': () => jsonResponse(sam, 201),
       'GET /api/v1/bookings?player_id=p1': () => jsonResponse([]),
       'GET /api/v1/players/p1': () => jsonResponse({ ...sam, programs: [] }),
+      ...noProgressYet,
     })
 
     renderAt('/parent/players/new', routes)
@@ -70,6 +71,7 @@ describe('parent player pages', () => {
       ...loggedInAs(parentUser),
       'GET /api/v1/bookings?player_id=p1': () => jsonResponse([]),
       'GET /api/v1/players/p1': () => jsonResponse({ ...sam, programs: [program] }),
+      ...noProgressYet,
       'PATCH /api/v1/players/p1': () => jsonResponse({ ...sam, first_name: 'Samuel' }),
     })
 

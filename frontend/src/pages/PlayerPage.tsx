@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { QueryState } from '../components/QueryState'
+import { usePlayerAttendance } from '../features/attendance/api'
+import { AttendanceHistory } from '../features/attendance/AttendanceHistory'
 import { useBookings, useCancelBooking, type Booking } from '../features/bookings/api'
+import { useNotes } from '../features/notes/api'
+import { NoteList } from '../features/notes/NoteList'
 import { usePlayer, useUpdatePlayer } from '../features/players/api'
 import { PlayerForm } from '../features/players/PlayerForm'
 import { formatDate } from '../lib/dates'
@@ -20,6 +24,8 @@ export function PlayerPage() {
   const updatePlayer = useUpdatePlayer(playerId)
   const bookings = useBookings(playerId)
   const cancel = useCancelBooking()
+  const attendance = usePlayerAttendance(playerId)
+  const notes = useNotes(playerId)
   const [editing, setEditing] = useState(false)
 
   return (
@@ -102,6 +108,18 @@ export function PlayerPage() {
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold">Attendance</h2>
+            <QueryState isPending={attendance.isPending} error={attendance.error} />
+            {attendance.data && <AttendanceHistory attendance={attendance.data} showProgram />}
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold">Development notes</h2>
+            <QueryState isPending={notes.isPending} error={notes.error} />
+            {notes.data && <NoteList notes={notes.data} showProgram />}
           </section>
         </>
       )}
