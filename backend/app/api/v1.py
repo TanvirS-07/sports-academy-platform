@@ -6,6 +6,7 @@ from app.attendance.router import router as attendance_router
 from app.auth.router import router as auth_router
 from app.bookings.router import router as bookings_router
 from app.health.router import router as health_router
+from app.notes.router import router as notes_router
 from app.players.router import router as players_router
 from app.programs.router import router as programs_router
 from app.sessions.router import router as sessions_router
@@ -22,3 +23,4 @@ api_router.include_router(programs_router)
 api_router.include_router(sessions_router)
 api_router.include_router(bookings_router)
 api_router.include_router(attendance_router)
+api_router.include_router(notes_router)
