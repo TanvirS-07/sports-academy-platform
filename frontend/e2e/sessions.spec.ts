@@ -32,7 +32,7 @@ async function openSessions(page: Page) {
 
 async function logOut(page: Page) {
   await page.getByRole('button', { name: 'Log out' }).click()
-  await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible()
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Log in' })).toBeVisible()
 }
 
 async function registerWithChild(page: Page, email: string, parentName: string, childName: string, surname: string) {
@@ -85,21 +85,22 @@ test('two parents compete for the last place in a session', async ({ page }) => 
   await page.getByLabel('Location').fill('Main oval')
   await page.getByLabel('Capacity').fill('1')
   await page.getByRole('button', { name: 'Create session' }).click()
-  await expect(page.getByRole('heading', { name: /10:00 am to 11:30 am/ })).toBeVisible()
-  await expect(page.getByText('Main oval · 0 of 1 booked, 1 left')).toBeVisible()
+  await expect(page.getByText('10:00 am to 11:30 am')).toBeVisible()
+  await expect(page.getByText('0 / 1 places')).toBeVisible()
   await logOut(page)
 
   // The first parent takes the only place.
   await logIn(page, firstParent, PARENT_PASSWORD)
   await page.getByRole('link', { name: 'Book sessions' }).click()
   await page.getByRole('button', { name: 'Book Sam' }).click()
-  await expect(page.getByText('Sam: booked')).toBeVisible()
+  await expect(page.getByText('Sam booked', { exact: true })).toBeVisible()
   await logOut(page)
 
   // The second parent sees it's full.
   await logIn(page, secondParent, PARENT_PASSWORD)
   await openSessions(page)
-  await expect(page.getByText(/Full \(1 of 1 booked\)/)).toBeVisible()
+  await expect(page.getByText('1 / 1 places')).toBeVisible()
+  await expect(page.getByText('Full', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Book Jo' })).toBeDisabled()
   await logOut(page)
 
@@ -107,7 +108,8 @@ test('two parents compete for the last place in a session', async ({ page }) => 
   await logIn(page, firstParent, PARENT_PASSWORD)
   await page.goto('/parent')
   await page.getByRole('link', { name: new RegExp(`Sam ${surname}`) }).click()
-  await page.getByRole('button', { name: 'Cancel booking' }).click()
+  await page.getByRole('button', { name: 'Cancel booking for' }).click()
+  await page.getByRole('button', { name: 'Cancel booking', exact: true }).click()
   await expect(page.getByText('Cancelled', { exact: true })).toBeVisible()
   await logOut(page)
 
@@ -115,5 +117,5 @@ test('two parents compete for the last place in a session', async ({ page }) => 
   await logIn(page, secondParent, PARENT_PASSWORD)
   await openSessions(page)
   await page.getByRole('button', { name: 'Book Jo' }).click()
-  await expect(page.getByText('Jo: booked')).toBeVisible()
+  await expect(page.getByText('Jo booked', { exact: true })).toBeVisible()
 })

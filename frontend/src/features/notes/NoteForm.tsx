@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 
-import { FormError, FormField, SubmitButton, TextAreaField } from '../../components/FormField'
+import { FormActions, FormError, FormField, TextAreaField } from '../../components/FormField'
 import { errorMessage } from '../../lib/errors'
 import { toSydney } from '../../lib/sydneyTime'
 import type { NoteData } from './api'
@@ -9,11 +9,12 @@ type Props = {
   initial?: NoteData
   submitLabel: string
   onSubmit: (data: NoteData) => Promise<unknown>
+  onCancel?: () => void
 }
 
 const MAX_LENGTH = 2000
 
-export function NoteForm({ initial, submitLabel, onSubmit }: Props) {
+export function NoteForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
   // The academy is in Sydney, so "today" is today in Sydney.
   const today = toSydney(new Date()).date
   const [form, setForm] = useState<NoteData>(
@@ -55,7 +56,7 @@ export function NoteForm({ initial, submitLabel, onSubmit }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <FormError message={error} />
       <FormField label="Date" name="noted_on" type="date" max={today} required value={form.noted_on}
         onChange={update('noted_on')} />
@@ -65,7 +66,7 @@ export function NoteForm({ initial, submitLabel, onSubmit }: Props) {
         value={form.improvements} onChange={update('improvements')} />
       <TextAreaField label="Progress" name="progress" maxLength={MAX_LENGTH}
         value={form.progress} onChange={update('progress')} />
-      <SubmitButton busy={busy}>{submitLabel}</SubmitButton>
+      <FormActions busy={busy} submitLabel={submitLabel} onCancel={onCancel} />
     </form>
   )
 }

@@ -78,3 +78,24 @@ export function sydneyToUtc(date: string, time: string): string | null {
   }
   return null
 }
+
+const partFormats = {
+  weekday: new Intl.DateTimeFormat('en-AU', { weekday: 'short', timeZone: ACADEMY_TIME_ZONE }),
+  day: new Intl.DateTimeFormat('en-AU', { day: 'numeric', timeZone: ACADEMY_TIME_ZONE }),
+  month: new Intl.DateTimeFormat('en-AU', { month: 'short', timeZone: ACADEMY_TIME_ZONE }),
+}
+
+/** The pieces of a session's date for a fixture-style date column: "Tue", "6", "Oct". */
+export function dateParts(iso: string): { weekday: string; day: string; month: string } {
+  const date = new Date(iso)
+  return {
+    weekday: partFormats.weekday.format(date),
+    day: partFormats.day.format(date),
+    month: partFormats.month.format(date).slice(0, 3),
+  }
+}
+
+/** "4:30 pm to 6:00 pm" */
+export function formatTimeRange(startsAt: string, endsAt: string): string {
+  return `${formatTime(startsAt)} to ${formatTime(endsAt)}`
+}

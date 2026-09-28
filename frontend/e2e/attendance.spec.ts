@@ -30,7 +30,7 @@ async function logIn(page: Page, email: string, password: string) {
 
 async function logOut(page: Page) {
   await page.getByRole('button', { name: 'Log out' }).click()
-  await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible()
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Log in' })).toBeVisible()
 }
 
 test('a coach records attendance and a note, and the parent sees both', async ({ page }) => {
@@ -84,7 +84,7 @@ test('a coach records attendance and a note, and the parent sees both', async ({
   await logIn(page, parentEmail, PARENT_PASSWORD)
   await page.goto('/parent/sessions')
   await page.getByRole('button', { name: 'Book Sam' }).click()
-  await expect(page.getByText('Sam: booked')).toBeVisible()
+  await expect(page.getByText('Sam booked', { exact: true })).toBeVisible()
   await logOut(page)
 
   // Pretend the session has happened. The API only creates future sessions.
@@ -101,7 +101,7 @@ test('a coach records attendance and a note, and the parent sees both', async ({
 
   await page.goto(programUrl)
   await page.getByRole('link', { name: child }).click()
-  await expect(page.getByText('Attended 1 of 1 sessions')).toBeVisible()
+  await expect(page.getByText('Attended 1 of 1 session')).toBeVisible()
   await page.getByLabel('Skills being worked on').fill('Front foot drive')
   await page.getByLabel('Areas to improve').fill('Keep the head still')
   await page.getByRole('button', { name: 'Add note' }).click()
@@ -112,10 +112,10 @@ test('a coach records attendance and a note, and the parent sees both', async ({
   await logIn(page, parentEmail, PARENT_PASSWORD)
   await page.goto('/parent')
   await page.getByRole('link', { name: new RegExp(child) }).click()
-  await expect(page.getByText('Attended 1 of 1 sessions')).toBeVisible()
+  await expect(page.getByText('Attended 1 of 1 session')).toBeVisible()
   await expect(page.getByText('Present', { exact: true })).toBeVisible()
   await expect(page.getByText('Front foot drive')).toBeVisible()
-  await expect(page.getByText(`Coach E2E Coach · ${programName}`)).toBeVisible()
+  await expect(page.getByText('Coach E2E Coach', { exact: true })).toBeVisible()
 
   await page.goto(`/coach/sessions/${sessionId}`)
   await expect(page).toHaveURL('/parent')

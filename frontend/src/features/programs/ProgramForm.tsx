@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 
-import { FormError, FormField, SelectField, SubmitButton, TextAreaField } from '../../components/FormField'
+import { FormActions, FormError, FormField, SelectField, TextAreaField } from '../../components/FormField'
 import { errorMessage } from '../../lib/errors'
 import { useSports, type ProgramData } from './api'
 
@@ -8,11 +8,12 @@ type Props = {
   initial?: ProgramData
   submitLabel: string
   onSubmit: (data: ProgramData) => Promise<unknown>
+  onCancel?: () => void
 }
 
 const empty: ProgramData = { name: '', sport_id: '', age_group: '', description: '', objectives: '' }
 
-export function ProgramForm({ initial = empty, submitLabel, onSubmit }: Props) {
+export function ProgramForm({ initial = empty, submitLabel, onSubmit, onCancel }: Props) {
   const sports = useSports()
   const [form, setForm] = useState(initial)
   const [error, setError] = useState<string | null>(null)
@@ -44,11 +45,11 @@ export function ProgramForm({ initial = empty, submitLabel, onSubmit }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <FormError message={error} />
       <FormField label="Name" name="name" required placeholder="U14 Cricket Development"
         value={form.name} onChange={update('name')} />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <SelectField label="Sport" name="sport_id" required value={sportId} onChange={update('sport_id')}>
           <option value="" disabled>Choose a sport</option>
           {sports.data?.map((sport) => (
@@ -62,7 +63,7 @@ export function ProgramForm({ initial = empty, submitLabel, onSubmit }: Props) {
         value={form.description} onChange={update('description')} />
       <TextAreaField label="Training objectives" name="objectives"
         value={form.objectives} onChange={update('objectives')} />
-      <SubmitButton busy={busy}>{submitLabel}</SubmitButton>
+      <FormActions busy={busy} submitLabel={submitLabel} onCancel={onCancel} />
     </form>
   )
 }

@@ -20,7 +20,7 @@ async function logIn(page: Page, email: string, password: string) {
 
 async function logOut(page: Page) {
   await page.getByRole('button', { name: 'Log out' }).click()
-  await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible()
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Log in' })).toBeVisible()
 }
 
 test('a coach enrols a parent’s child and the parent sees the program', async ({ page }) => {
@@ -60,7 +60,7 @@ test('a coach enrols a parent’s child and the parent sees the program', async 
   await expect(page.getByText('Parent: Alex')).toBeVisible()
   await page.getByRole('button', { name: `Enrol Sam ${surname}` }).click()
   await expect(page.getByRole('button', { name: `Make inactive: Sam ${surname}` })).toBeVisible()
-  await expect(page.getByText('Born 14 May 2013')).toBeVisible()
+  await expect(page.getByText('14 May 2013', { exact: true })).toBeVisible()
   await logOut(page)
 
   // The parent now sees the program on their child's page.

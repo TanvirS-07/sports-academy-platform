@@ -1,15 +1,22 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 
+import { Button, ButtonLink, TextButton } from '../components/Button'
+import { ConfirmAction } from '../components/Confirm'
+import { Notice } from '../components/Notice'
+import { PageHeader } from '../components/PageHeader'
+import { EmptyState, Panel, PanelBody, RowList } from '../components/Panel'
 import { QueryState } from '../components/QueryState'
+import { SessionRow } from '../components/SessionRow'
+import { Tag } from '../components/Tag'
+import { useToast } from '../components/Toast'
 import { useProgram, useRoster, useSetEnrolmentStatus, useUpdateProgram } from '../features/programs/api'
 import { EnrolPlayer } from '../features/programs/EnrolPlayer'
 import { ProgramForm } from '../features/programs/ProgramForm'
 import { useSessions, type TrainingSession } from '../features/sessions/api'
-import { placesText } from '../features/sessions/places'
-import { formatDate } from '../lib/dates'
+import { SessionPlaces } from '../features/sessions/SessionPlaces'
+import { ageOn, formatDate } from '../lib/dates'
 import { errorMessage } from '../lib/errors'
-import { formatSessionTime } from '../lib/sydneyTime'
 
 export function ProgramPage() {
   const { programId = '' } = useParams()
@@ -18,137 +25,209 @@ export function ProgramPage() {
   const sessions = useSessions(programId, { includePast: true })
   const updateProgram = useUpdateProgram(programId)
   const setStatus = useSetEnrolmentStatus(programId)
+  const toast = useToast()
   const [editing, setEditing] = useState(false)
 
   // The API returns them oldest first. Past ones are shown newest first, for attendance.
   const now = new Date()
   const upcoming = sessions.data?.filter((session) => new Date(session.ends_at) > now)
   const past = sessions.data?.filter((session) => new Date(session.ends_at) <= now).reverse().slice(0, 10)
+  const activeCount = roster.data?.filter((enrolment) => enrolment.status === 'ACTIVE').length
+
+  function changeStatus(playerId: string, name: string, status: 'ACTIVE' | 'INACTIVE') {
+    setStatus.mutate(
+      { playerId, status },
+      { onSuccess: () => toast(status === 'ACTIVE' ? `${name} is active again.` : `${name} is now inactive.`) },
+    )
+  }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <Link to="/coach" className="text-sm text-emerald-700 hover:underline">← My programs</Link>
+    <>
       <QueryState isPending={program.isPending} error={program.error} />
 
       {program.data && (
         <>
-          <div className="space-y-3">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <h1 className="text-2xl font-bold">{program.data.name}</h1>
-                <p className="text-slate-600">{program.data.sport.name} · {program.data.age_group}</p>
-              </div>
-              {!editing && (
-                <button type="button" onClick={() => setEditing(true)}
-                  className="text-sm font-medium text-emerald-700 hover:underline">
-                  Edit
-                </button>
-              )}
-            </div>
-            {editing ? (
-              <ProgramForm
-                initial={{
-                  name: program.data.name,
-                  sport_id: program.data.sport.id,
-                  age_group: program.data.age_group,
-                  description: program.data.description,
-                  objectives: program.data.objectives,
-                }}
-                submitLabel="Save changes"
-                onSubmit={async (data) => {
-                  await updateProgram.mutateAsync(data)
-                  setEditing(false)
-                }}
-              />
-            ) : (
+          <PageHeader
+            back={{ label: 'Programs', to: '/coach' }}
+            title={program.data.name}
+            description={
               <>
-                {program.data.description && <p className="whitespace-pre-line">{program.data.description}</p>}
-                {program.data.objectives && (
-                  <div>
-                    <h2 className="text-sm font-semibold text-slate-700">Training objectives</h2>
-                    <p className="whitespace-pre-line">{program.data.objectives}</p>
-                  </div>
-                )}
+                {program.data.age_group}
+                {activeCount !== undefined && ` · ${activeCount} active ${activeCount === 1 ? 'player' : 'players'}`}
               </>
-            )}
-          </div>
+            }
+            actions={
+              !editing && (
+                <>
+                  <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
+                  <ButtonLink to={`/coach/programs/${programId}/sessions/new`}>New session</ButtonLink>
+                </>
+              )
+            }
+          />
 
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Upcoming sessions</h2>
-              <Link to={`/coach/programs/${programId}/sessions/new`}
-                className="rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800">
-                New session
-              </Link>
-            </div>
-            <QueryState isPending={sessions.isPending} error={sessions.error} />
-            {upcoming?.length === 0 && <p className="text-slate-600">No upcoming sessions.</p>}
-            <SessionLinks sessions={upcoming ?? []} />
-          </section>
-
-          {past && past.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-lg font-semibold">Past sessions</h2>
-              <SessionLinks sessions={past} />
-            </section>
+          {editing && (
+            <Panel title="Edit program" id="edit-program" className="mb-8 max-w-2xl">
+              <PanelBody className="py-5">
+                <ProgramForm
+                  initial={{
+                    name: program.data.name,
+                    sport_id: program.data.sport.id,
+                    age_group: program.data.age_group,
+                    description: program.data.description,
+                    objectives: program.data.objectives,
+                  }}
+                  submitLabel="Save changes"
+                  onCancel={() => setEditing(false)}
+                  onSubmit={async (data) => {
+                    await updateProgram.mutateAsync(data)
+                    setEditing(false)
+                    toast('Program saved.')
+                  }}
+                />
+              </PanelBody>
+            </Panel>
           )}
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Players</h2>
-            <QueryState isPending={roster.isPending} error={roster.error} />
-            {setStatus.error && (
-              <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
-                {errorMessage(setStatus.error)}
-              </p>
-            )}
-            {roster.data?.length === 0 && <p className="text-slate-600">No players enrolled yet.</p>}
-            <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
-              {roster.data?.map((enrolment) => {
-                const active = enrolment.status === 'ACTIVE'
-                const name = `${enrolment.first_name} ${enrolment.last_name}`
-                return (
-                  <li key={enrolment.player_id} className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <Link to={`/coach/programs/${programId}/players/${enrolment.player_id}`}
-                        className={active ? 'font-medium hover:underline' : 'font-medium text-slate-400 hover:underline'}>
-                        {name}
-                      </Link>
-                      <p className="text-sm text-slate-500">
-                        {enrolment.date_of_birth ? `Born ${formatDate(enrolment.date_of_birth)}` : 'Inactive'}
-                      </p>
-                    </div>
-                    <button type="button" disabled={setStatus.isPending}
-                      onClick={() =>
-                        setStatus.mutate({ playerId: enrolment.player_id, status: active ? 'INACTIVE' : 'ACTIVE' })
-                      }
-                      aria-label={`${active ? 'Make inactive' : 'Make active'}: ${name}`}
-                      className="text-sm font-medium text-emerald-700 hover:underline disabled:opacity-60">
-                      {active ? 'Make inactive' : 'Make active'}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
+          <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px] lg:gap-8">
+            <div className="min-w-0 space-y-6 lg:space-y-8">
+              <Panel title="Upcoming sessions" id="upcoming">
+                <QueryState isPending={sessions.isPending} error={sessions.error} />
+                {upcoming?.length === 0 && (
+                  <EmptyState
+                    action={
+                      <ButtonLink to={`/coach/programs/${programId}/sessions/new`} variant="secondary">
+                        Add a session
+                      </ButtonLink>
+                    }
+                  >
+                    No upcoming sessions. Add one so parents can book.
+                  </EmptyState>
+                )}
+                <SessionLinks sessions={upcoming ?? []} />
+              </Panel>
 
-          <EnrolPlayer programId={programId} roster={roster.data ?? []} />
+              <Panel title="Players" id="players">
+                <EnrolPlayer programId={programId} roster={roster.data ?? []} />
+                <QueryState isPending={roster.isPending} error={roster.error} />
+                {setStatus.error && (
+                  <div className="px-4 pt-4 sm:px-5">
+                    <Notice tone="danger">{errorMessage(setStatus.error)}</Notice>
+                  </div>
+                )}
+                {roster.data?.length === 0 && (
+                  <EmptyState>No players yet. Find a player above to enrol them.</EmptyState>
+                )}
+                {roster.data && roster.data.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b border-line bg-subtle/60 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase">
+                        <tr>
+                          <th scope="col" className="px-4 py-2.5 font-semibold sm:px-5">Player</th>
+                          <th scope="col" className="px-3 py-2.5 font-semibold">Age</th>
+                          <th scope="col" className="hidden px-3 py-2.5 font-semibold sm:table-cell">Date of birth</th>
+                          <th scope="col" className="px-4 py-2.5 sm:px-5"><span className="sr-only">Actions</span></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line">
+                        {roster.data.map((enrolment) => {
+                          const active = enrolment.status === 'ACTIVE'
+                          const name = `${enrolment.first_name} ${enrolment.last_name}`
+                          return (
+                            <tr key={enrolment.player_id} className="group">
+                              <td className="px-4 py-3 sm:px-5">
+                                <span className="flex items-center gap-2 whitespace-nowrap">
+                                  <Link
+                                    to={`/coach/programs/${programId}/players/${enrolment.player_id}`}
+                                    className={`font-semibold underline-offset-4 hover:underline ${active ? '' : 'text-ink-muted'}`}
+                                  >
+                                    {name}
+                                  </Link>
+                                  {!active && <Tag>Inactive</Tag>}
+                                </span>
+                              </td>
+                              <td className="px-3 py-3 text-ink-muted tabular-nums">
+                                {enrolment.date_of_birth ? ageOn(enrolment.date_of_birth) : '–'}
+                              </td>
+                              <td className="hidden px-3 py-3 whitespace-nowrap text-ink-muted tabular-nums sm:table-cell">
+                                {enrolment.date_of_birth ? formatDate(enrolment.date_of_birth) : '–'}
+                              </td>
+                              <td className="px-4 py-3 text-right sm:px-5">
+                                <div className="transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0">
+                                  {active ? (
+                                    <ConfirmAction
+                                      label="Make inactive"
+                                      ariaLabel={`Make inactive: ${name}`}
+                                      question={`Make ${enrolment.first_name} inactive? Their upcoming bookings are cancelled.`}
+                                      confirmLabel="Make inactive"
+                                      busy={setStatus.isPending}
+                                      onConfirm={() => changeStatus(enrolment.player_id, name, 'INACTIVE')}
+                                    />
+                                  ) : (
+                                    <TextButton
+                                      disabled={setStatus.isPending}
+                                      aria-label={`Make active: ${name}`}
+                                      onClick={() => changeStatus(enrolment.player_id, name, 'ACTIVE')}
+                                    >
+                                      Make active
+                                    </TextButton>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Panel>
+            </div>
+
+            <div className="space-y-6 lg:space-y-8">
+              {(program.data.description || program.data.objectives) && (
+                <Panel title="About this program" id="about">
+                  <PanelBody className="space-y-4 text-[15px] leading-7">
+                    {program.data.description && <p className="whitespace-pre-line">{program.data.description}</p>}
+                    {program.data.objectives && (
+                      <div>
+                        <h3 className="text-xs font-semibold tracking-[0.08em] text-ink-muted uppercase">
+                          Training objectives
+                        </h3>
+                        <p className="mt-1 whitespace-pre-line">{program.data.objectives}</p>
+                      </div>
+                    )}
+                  </PanelBody>
+                </Panel>
+              )}
+
+              {past && past.length > 0 && (
+                <Panel title="Past sessions" id="past">
+                  <SessionLinks sessions={past} showPlaces={false} />
+                </Panel>
+              )}
+            </div>
+          </div>
         </>
       )}
-    </div>
+    </>
   )
 }
 
-function SessionLinks({ sessions }: { sessions: TrainingSession[] }) {
+function SessionLinks({ sessions, showPlaces = true }: { sessions: TrainingSession[]; showPlaces?: boolean }) {
   return (
-    <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+    <RowList>
       {sessions.map((session) => (
-        <li key={session.id}>
-          <Link to={`/coach/sessions/${session.id}`} className="block px-4 py-3 hover:bg-slate-50">
-            <p className="font-medium">{formatSessionTime(session.starts_at, session.ends_at)}</p>
-            <p className="text-sm text-slate-500">{session.location} · {placesText(session)}</p>
-          </Link>
-        </li>
+        <SessionRow
+          key={session.id}
+          startsAt={session.starts_at}
+          endsAt={session.ends_at}
+          to={`/coach/sessions/${session.id}`}
+          muted={session.status === 'CANCELLED'}
+          detail={session.location}
+          aside={showPlaces || session.status === 'CANCELLED' ? <SessionPlaces session={session} /> : undefined}
+        />
       ))}
-    </ul>
+    </RowList>
   )
 }

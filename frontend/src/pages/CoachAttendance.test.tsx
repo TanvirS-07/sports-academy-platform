@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { setAccessToken } from '../lib/api'
 import { toSydney } from '../lib/sydneyTime'
-import { callsTo, coachUser, firstCallTo, jsonResponse, loggedInAs, mockBackend, renderAt } from '../test/utils'
+import { callsTo, coachUser, firstCallTo, fullText, jsonResponse, loggedInAs, mockBackend, renderAt } from '../test/utils'
 import { CoachPlayerPage } from './CoachPlayerPage'
 import { CoachSessionPage } from './CoachSessionPage'
 import { ProgramPage } from './ProgramPage'
@@ -83,7 +83,7 @@ describe('coach attendance and notes', () => {
 
     const past = (await screen.findByRole('heading', { name: 'Past sessions' })).closest('section')
     expect(past).not.toBeNull()
-    expect(within(past as HTMLElement).getByText('Saturday 19 September, 10:00 am to 11:30 am')).toBeInTheDocument()
+    expect(within(past as HTMLElement).getByText(fullText('Saturday 19 September, 10:00 am to 11:30 am'))).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Sam Taylor' })).toHaveAttribute('href', '/coach/programs/g1/players/p1')
   })
 
@@ -150,7 +150,7 @@ describe('coach attendance and notes', () => {
 
     renderAt('/coach/programs/g1/players/p1', routes)
 
-    expect(await screen.findByText('Attended 1 of 1 sessions')).toBeInTheDocument()
+    expect(await screen.findByText('Attended 1 of 1 session')).toBeInTheDocument()
     expect(await screen.findAllByText('Front foot drive')).toHaveLength(2)
     // Only the note this coach wrote can be edited.
     expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(1)

@@ -1,5 +1,8 @@
 import { useState } from 'react'
 
+import { TextButton } from '../../components/Button'
+import { EmptyState } from '../../components/Panel'
+import { useToast } from '../../components/Toast'
 import { formatDate } from '../../lib/dates'
 import type { DevelopmentNote, NoteData } from './api'
 import { NoteForm } from './NoteForm'
@@ -17,48 +20,50 @@ const sections = [
   ['progress', 'Progress'],
 ] as const
 
+/** Notes as a timeline: the date and coach on the left, what they wrote on the right. */
 export function NoteList({ notes, showProgram, editor }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
+  const toast = useToast()
 
-  if (notes.length === 0) return <p className="text-slate-600">No development notes yet.</p>
+  if (notes.length === 0) return <EmptyState>No development notes yet.</EmptyState>
 
   return (
-    <ul className="space-y-3">
+    <ul className="divide-y divide-line">
       {notes.map((note) => (
-        <li key={note.id} className="space-y-2 rounded-md border border-slate-200 bg-white p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="font-medium">{formatDate(note.noted_on)}</p>
-              <p className="text-sm text-slate-500">
-                Coach {note.coach_name}{showProgram && ` · ${note.program.name}`}
-              </p>
-            </div>
+        <li key={note.id} className="grid gap-3 px-4 py-5 sm:grid-cols-[150px_1fr] sm:gap-6 sm:px-5">
+          <div>
+            <p className="font-semibold tabular-nums">{formatDate(note.noted_on)}</p>
+            <p className="mt-0.5 text-sm text-ink-muted">
+              Coach {note.coach_name}
+            </p>
+            {showProgram && <p className="text-sm text-ink-muted">{note.program.name}</p>}
             {editor?.coachId === note.coach_id && editingId !== note.id && (
-              <button type="button" onClick={() => setEditingId(note.id)}
-                className="text-sm font-medium text-emerald-700 hover:underline">
-                Edit
-              </button>
+              <TextButton className="mt-2" onClick={() => setEditingId(note.id)}>Edit</TextButton>
             )}
           </div>
           {editor && editingId === note.id ? (
             <NoteForm
               initial={note}
               submitLabel="Save note"
+              onCancel={() => setEditingId(null)}
               onSubmit={async (data) => {
                 await editor.onUpdate(note.id, data)
                 setEditingId(null)
+                toast('Note saved.')
               }}
             />
           ) : (
-            sections.map(
-              ([field, label]) =>
-                note[field] && (
-                  <div key={field}>
-                    <h3 className="text-sm font-semibold text-slate-700">{label}</h3>
-                    <p className="whitespace-pre-line">{note[field]}</p>
-                  </div>
-                ),
-            )
+            <div className="max-w-prose space-y-3">
+              {sections.map(
+                ([field, label]) =>
+                  note[field] && (
+                    <div key={field}>
+                      <h3 className="text-xs font-semibold tracking-[0.08em] text-ink-muted uppercase">{label}</h3>
+                      <p className="mt-1 leading-7 whitespace-pre-line">{note[field]}</p>
+                    </div>
+                  ),
+              )}
+            </div>
           )}
         </li>
       ))}

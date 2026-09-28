@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 
+import { Loading } from '../components/QueryState'
 import { homePathFor, type Role } from './types'
 import { useAuth } from './useAuth'
 
 function Restoring() {
-  return <p className="text-slate-500">Loading…</p>
+  return <Loading />
 }
 
 /** Sends logged-out users to /login, then back here after they log in. */

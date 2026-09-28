@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { setAccessToken } from '../lib/api'
-import { callsTo, firstCallTo, jsonResponse, loggedInAs, mockBackend, noProgressYet, parentUser, renderAt } from '../test/utils'
+import { callsTo, firstCallTo, fullText, jsonResponse, loggedInAs, mockBackend, noProgressYet, parentUser, renderAt } from '../test/utils'
 import { ParentSessionsPage } from './ParentSessionsPage'
 import { PlayerPage } from './PlayerPage'
 
@@ -66,10 +66,10 @@ describe('parent booking pages', () => {
 
     renderAt('/parent/sessions', routes)
 
-    expect(await screen.findByText('Saturday 9 November, 10:00 am to 11:30 am')).toBeInTheDocument()
+    expect(await screen.findByText(fullText('Saturday 9 November, 10:00 am to 11:30 am'))).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('button', { name: 'Book Sam' }))
 
-    expect(await screen.findByText('Sam: booked')).toBeInTheDocument()
+    expect(await screen.findByText('Sam booked')).toBeInTheDocument()
     expect(screen.queryByText(/Kim/)).not.toBeInTheDocument()
     expect(JSON.parse(firstCallTo(fetchMock, 'POST /api/v1/sessions/x1/bookings').body as string)).toEqual({
       player_id: 'p1',
@@ -85,7 +85,8 @@ describe('parent booking pages', () => {
 
     renderAt('/parent/sessions', routes)
 
-    expect(await screen.findByText(/Full \(10 of 10 booked\)/)).toBeInTheDocument()
+    expect(await screen.findByText('10 / 10 places')).toBeInTheDocument()
+    expect(screen.getByText('Full')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Book Sam' })).toBeDisabled()
   })
 
@@ -118,7 +119,9 @@ describe('parent booking pages', () => {
     })
 
     renderAt('/parent/players/p1', routes)
-    fireEvent.click(await screen.findByRole('button', { name: 'Cancel booking' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel booking for Saturday 9 November' }))
+    expect(callsTo(fetchMock, 'POST /api/v1/bookings/b1/cancel')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel booking' }))
 
     expect(await screen.findByText('Cancelled')).toBeInTheDocument()
     expect(callsTo(fetchMock, 'POST /api/v1/bookings/b1/cancel')).toHaveLength(1)
