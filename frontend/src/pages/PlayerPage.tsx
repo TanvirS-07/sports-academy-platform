@@ -2,14 +2,24 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { QueryState } from '../components/QueryState'
+import { useBookings, useCancelBooking, type Booking } from '../features/bookings/api'
 import { usePlayer, useUpdatePlayer } from '../features/players/api'
 import { PlayerForm } from '../features/players/PlayerForm'
 import { formatDate } from '../lib/dates'
+import { formatSessionTime } from '../lib/sydneyTime'
+
+/** Hides an old cancelled booking when the child has booked the same session again. */
+function withoutRebooked(bookings: Booking[]): Booking[] {
+  const confirmed = new Set(bookings.filter((b) => b.status === 'CONFIRMED').map((b) => b.session.id))
+  return bookings.filter((b) => b.status === 'CONFIRMED' || !confirmed.has(b.session.id))
+}
 
 export function PlayerPage() {
   const { playerId = '' } = useParams()
   const player = usePlayer(playerId)
   const updatePlayer = useUpdatePlayer(playerId)
+  const bookings = useBookings(playerId)
+  const cancel = useCancelBooking()
   const [editing, setEditing] = useState(false)
 
   return (
@@ -59,6 +69,39 @@ export function PlayerPage() {
                 ))}
               </ul>
             )}
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Upcoming bookings</h2>
+              <Link to="/parent/sessions" className="text-sm font-medium text-emerald-700 hover:underline">
+                Book sessions
+              </Link>
+            </div>
+            <QueryState isPending={bookings.isPending} error={bookings.error ?? cancel.error} />
+            {bookings.data?.length === 0 && <p className="text-slate-600">No upcoming bookings.</p>}
+            <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+              {withoutRebooked(bookings.data ?? []).map((booking) => (
+                <li key={booking.id} className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className={booking.status === 'CONFIRMED' ? 'font-medium' : 'font-medium text-slate-400'}>
+                      {formatSessionTime(booking.session.starts_at, booking.session.ends_at)}
+                    </p>
+                    <p className="text-sm text-slate-500">{booking.session.program.name} · {booking.session.location}</p>
+                  </div>
+                  {booking.status === 'CONFIRMED' ? (
+                    <button type="button" disabled={cancel.isPending} onClick={() => cancel.mutate(booking.id)}
+                      className="text-sm font-medium text-red-700 hover:underline disabled:opacity-60">
+                      Cancel booking
+                    </button>
+                  ) : (
+                    <span className="text-sm text-slate-500">
+                      {booking.session.status === 'CANCELLED' ? 'Session cancelled' : 'Cancelled'}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
           </section>
         </>
       )}

@@ -38,6 +38,7 @@ describe('parent player pages', () => {
     const fetchMock = mockBackend({
       ...loggedInAs(parentUser),
       'POST /api/v1/players': () => jsonResponse(sam, 201),
+      'GET /api/v1/bookings?player_id=p1': () => jsonResponse([]),
       'GET /api/v1/players/p1': () => jsonResponse({ ...sam, programs: [] }),
     })
 
@@ -67,6 +68,7 @@ describe('parent player pages', () => {
   it('shows the player’s programs and saves edits', async () => {
     const fetchMock = mockBackend({
       ...loggedInAs(parentUser),
+      'GET /api/v1/bookings?player_id=p1': () => jsonResponse([]),
       'GET /api/v1/players/p1': () => jsonResponse({ ...sam, programs: [program] }),
       'PATCH /api/v1/players/p1': () => jsonResponse({ ...sam, first_name: 'Samuel' }),
     })
@@ -91,6 +93,7 @@ describe('parent player pages', () => {
   it('shows the error when the player can’t be found', async () => {
     mockBackend({
       ...loggedInAs(parentUser),
+      'GET /api/v1/bookings?player_id=p1': () => jsonResponse([]),
       'GET /api/v1/players/p1': () =>
         jsonResponse({ error: { code: 'PLAYER_NOT_FOUND', message: 'Player not found' } }, 404),
     })
