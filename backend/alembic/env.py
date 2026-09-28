@@ -15,6 +15,7 @@ from app.auth import models as auth_models  # noqa: F401
 from app.bookings import models as bookings_models  # noqa: F401
 from app.core.config import get_settings
 from app.db.base import Base
+from app.notes import models as notes_models  # noqa: F401
 from app.players import models as players_models  # noqa: F401
 from app.programs import models as programs_models  # noqa: F401
 from app.sessions import models as sessions_models  # noqa: F401
