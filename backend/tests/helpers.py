@@ -1,6 +1,6 @@
 """Small helpers for creating test data."""
 
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,9 +9,10 @@ from app.core.security import create_access_token
 from app.players.models import Player
 from app.players.schemas import PlayerCreate
 from app.players.service import create_player
-from app.programs.models import Program
+from app.programs.models import Program, ProgramPlayer
 from app.programs.schemas import ProgramCreate
 from app.programs.service import create_program
+from app.sessions.models import TrainingSession
 from app.sports.models import Sport
 from app.users.models import Role, User
 from app.users.service import create_user
@@ -36,6 +37,10 @@ def make_user(
         user.is_active = False
         db.commit()
     return user
+
+
+def make_coach(db: Session, email: str = "coach@example.com") -> User:
+    return make_user(db, email=email, role=Role.COACH, first_name="Chris", last_name="Lee")
 
 
 def auth_header(user: User) -> dict[str, str]:
@@ -74,3 +79,35 @@ def make_program(
     return create_program(
         db, coach, ProgramCreate(name=name, sport_id=cricket(db).id, age_group=age_group)
     )
+
+
+def enrol(db: Session, program: Program, player: Player) -> ProgramPlayer:
+    enrolment = ProgramPlayer(program_id=program.id, player_id=player.id)
+    db.add(enrolment)
+    db.commit()
+    return enrolment
+
+
+def make_session(
+    db: Session,
+    program: Program,
+    *,
+    starts_at: datetime | None = None,
+    hours: float = 1.5,
+    capacity: int = 10,
+    location: str = "Main oval",
+) -> TrainingSession:
+    """Adds the row directly, so tests can also make sessions that started in the past."""
+    if starts_at is None:
+        starts_at = datetime.now(UTC) + timedelta(days=7)
+    session = TrainingSession(
+        program_id=program.id,
+        starts_at=starts_at,
+        ends_at=starts_at + timedelta(hours=hours),
+        location=location,
+        capacity=capacity,
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session

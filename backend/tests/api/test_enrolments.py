@@ -3,14 +3,9 @@ import uuid
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.users.models import Role, User
-from tests.helpers import auth_header, make_player, make_program, make_user
+from tests.helpers import auth_header, make_coach, make_player, make_program, make_user
 
 PLAYERS_URL = "/api/v1/players"
-
-
-def make_coach(db: Session, email: str = "coach@example.com") -> User:
-    return make_user(db, email=email, role=Role.COACH, first_name="Chris", last_name="Lee")
 
 
 def roster_url(program_id: uuid.UUID) -> str:
