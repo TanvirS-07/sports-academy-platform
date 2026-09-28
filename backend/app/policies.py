@@ -57,3 +57,24 @@ def can_view_session(db: Session, user: User, session: TrainingSession) -> bool:
             )
         )
     )
+
+
+def can_view_player_records(db: Session, user: User, player: Player) -> bool:
+    """Attendance and development notes: the player's parents, and coaches who have the
+    player in one of their programs. An inactive enrolment still counts, so a coach can
+    look back at their own records. Routes then only show a coach their own programs."""
+    if user.role == Role.PARENT:
+        return can_act_for_player(db, user, player)
+    if user.role != Role.COACH:
+        return False
+    return bool(
+        db.scalar(
+            select(
+                exists().where(
+                    ProgramPlayer.player_id == player.id,
+                    ProgramPlayer.program_id == Program.id,
+                    Program.coach_id == user.id,
+                )
+            )
+        )
+    )

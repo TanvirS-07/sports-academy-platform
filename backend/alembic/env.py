@@ -10,6 +10,7 @@ from alembic import context
 from sqlalchemy import create_engine, pool
 
 # Every models module is imported so autogenerate can see the tables.
+from app.attendance import models as attendance_models  # noqa: F401
 from app.auth import models as auth_models  # noqa: F401
 from app.bookings import models as bookings_models  # noqa: F401
 from app.core.config import get_settings

@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.bookings.models import Booking
 from app.core.security import create_access_token
 from app.players.models import Player
 from app.players.schemas import PlayerCreate
@@ -111,3 +112,12 @@ def make_session(
     db.commit()
     db.refresh(session)
     return session
+
+
+def book(db: Session, session: TrainingSession, player: Player, parent: User) -> Booking:
+    """Adds a confirmed booking directly, so it also works for sessions that have started."""
+    booking = Booking(session_id=session.id, player_id=player.id, booked_by=parent.id)
+    db.add(booking)
+    session.booked_count += 1
+    db.commit()
+    return booking
