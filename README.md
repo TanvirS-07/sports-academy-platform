@@ -6,7 +6,7 @@ The idea comes from helping run a cricket coaching academy. A lot of the work th
 
 ## Project status
 
-**Phases 1 to 4 (Foundation, Authentication, Core management, and Sessions and bookings) are done. Phase 5 (Attendance and development) is next.**
+**Phases 1 to 5 (Foundation, Authentication, Core management, Sessions and bookings, and Attendance and development) are done. That's everything in the MVP. Phase 6 (Payments) is next.**
 
 What exists right now:
 
@@ -17,8 +17,10 @@ What exists right now:
 * Coaches can create programs, search for players by name and enrol them, and make an enrolment inactive or active again
 * Coaches can add training sessions to their programs with a capacity, edit them, cancel them, and see who's booked
 * Parents can book their children into sessions in their programs, see how many places are left, and cancel a booking before the session starts
+* Coaches can mark booked players as present, absent or excused once a session has started, and write development notes about players in their programs
+* Parents can see their child's attendance and every development note about them
 * A React frontend with login, register, a coach area, a parent area and an account page
-* PostgreSQL running in Docker, with tables for users, refresh tokens, players, sports (Cricket for now), programs, enrolments, training sessions and bookings, managed by Alembic
+* PostgreSQL running in Docker, with tables for users, refresh tokens, players, sports (Cricket for now), programs, enrolments, training sessions, bookings, attendance and development notes, managed by Alembic
 * Backend, frontend and end-to-end tests
 * A GitHub Actions CI pipeline
 
@@ -27,6 +29,8 @@ You stay logged in for 7 days, even after refreshing the page or closing the bro
 A child's date of birth is only shown to their parents and to the coaches of programs they're enrolled in. When a coach searches for a player, they see the name and the parents' first names, so two children with the same name can be told apart.
 
 Two parents can't both take the last place in a session. Each booking locks the session's row while it checks and updates the count, and the database also refuses a booked count higher than the capacity. Session times are stored in UTC and shown in Sydney time, whatever time zone your computer is in.
+
+A coach only sees the attendance and notes from their own programs. If a child is in two coaches' programs, neither coach sees what the other wrote, but the parents see all of it.
 
 Screenshots from Phase 2 are in [docs/screenshots/phase-2](docs/screenshots/phase-2/).
 Screenshots from Phase 4 are in [docs/screenshots/phase-4](docs/screenshots/phase-4/).
@@ -169,7 +173,7 @@ cd ..
 docker compose up --build -d
 docker compose exec backend alembic upgrade head
 
-# The login, program and session tests expect this coach account to exist
+# The login, program, session and attendance tests expect this coach account to exist
 docker compose exec -e COACH_PASSWORD=e2e-coach-password backend \
   python -m scripts.create_coach --email e2e-coach@example.com --first-name E2E --last-name Coach
 
