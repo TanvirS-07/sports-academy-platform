@@ -4,9 +4,39 @@ A web app for running a sports academy: training programs, sessions, bookings, a
 
 The idea comes from helping run a cricket coaching academy. A lot of the work there, like tracking who is booked into which session, taking attendance and keeping notes on players, is done by hand. This project is my attempt to put all of that in one place.
 
+## Screenshots
+
+These are from the current version of the app, branded as Precision Cricket Academy. The people and sessions are made-up test data.
+
+<p align="center"><img src="docs/screenshots/phase-5b/home.png" alt="Home page" width="520"></p>
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="33%">Coach's programs<br><img src="docs/screenshots/phase-5b/coach-programs.png" alt="Coach programs list" width="260"></td>
+    <td align="center" valign="top" width="33%">Sessions and players in a program<br><img src="docs/screenshots/phase-5b/coach-program.png" alt="Coach view of a program" width="260"></td>
+    <td align="center" valign="top" width="33%">Taking attendance<br><img src="docs/screenshots/phase-5b/coach-session-attendance.png" alt="Coach taking attendance" width="260"></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="33%">Calendar of upcoming sessions<br><img src="docs/screenshots/phase-5b/coach-calendar.png" alt="Calendar" width="260"></td>
+    <td align="center" valign="top" width="33%">Parent's home page<br><img src="docs/screenshots/phase-5b/parent-home.png" alt="Parent home page" width="260"></td>
+    <td align="center" valign="top" width="33%">A child's attendance and notes<br><img src="docs/screenshots/phase-5b/parent-player.png" alt="Parent view of a player's progress" width="260"></td>
+  </tr>
+</table>
+
+On a phone:
+
+<p>
+  <img src="docs/screenshots/phase-5b/parent-home-mobile.png" alt="Parent home page on a phone" width="120">
+  <img src="docs/screenshots/phase-5b/parent-calendar-mobile.png" alt="Calendar on a phone" width="120">
+</p>
+
+More screenshots from each phase are in [docs/screenshots](docs/screenshots/).
+
 ## Project status
 
-**Phases 1 to 5 (Foundation, Authentication, Core management, Sessions and bookings, and Attendance and development) are done. That's everything in the MVP. Phase 5b gave the frontend a proper design for Precision Cricket Academy. Phase 6 (Payments) is next.**
+**Phases 1 to 5 (Foundation, Authentication, Core management, Sessions and bookings, and Attendance and development) are done. That's everything in the MVP. Phase 5b gave the frontend a proper design for Precision Cricket Academy.**
+
+Phase 6 (Payments) and Phase 7 (Deployment) are future improvements. They aren't planned as of right now.
 
 What exists right now:
 
@@ -51,7 +81,7 @@ Everything else in this README describes planned features. The development phase
 | Testing | pytest, Vitest, Playwright |
 | Local environment | Docker Compose |
 | CI | GitHub Actions |
-| Deployment | Planned for Phase 7 with Terraform. The hosting provider hasn't been chosen yet. |
+| Deployment | Not planned right now. Phase 7 would cover it as a future improvement. |
 
 ### Pinned versions
 
@@ -90,7 +120,7 @@ Coach accounts will be created with a script rather than through public sign-up.
 
 **Players** start as a profile managed by a parent. A player login is optional and can be added later. With a login, a player can see their own schedule, attendance and development notes.
 
-Payments and invoices are planned for after the MVP.
+Payments and invoices would be a future improvement (Phase 6). They aren't planned right now.
 
 ### Session capacity
 
