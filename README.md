@@ -29,6 +29,7 @@ A child's date of birth is only shown to their parents and to the coaches of pro
 Two parents can't both take the last place in a session. Each booking locks the session's row while it checks and updates the count, and the database also refuses a booked count higher than the capacity. Session times are stored in UTC and shown in Sydney time, whatever time zone your computer is in.
 
 Screenshots from Phase 2 are in [docs/screenshots/phase-2](docs/screenshots/phase-2/).
+Screenshots from Phase 4 are in [docs/screenshots/phase-4](docs/screenshots/phase-4/).
 
 Everything else in this README describes planned features. The development phases are listed in [docs/project_specs.md](docs/project_specs.md#12-development-phases).
 
