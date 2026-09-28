@@ -17,6 +17,7 @@ import { ParentSessionsPage } from './pages/ParentSessionsPage'
 import { PlayerPage } from './pages/PlayerPage'
 import { ProgramPage } from './pages/ProgramPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { StatusPage } from './pages/StatusPage'
 
 export function App() {
   return (
@@ -25,6 +26,7 @@ export function App() {
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
+        <Route path="status" element={<StatusPage />} />
         <Route
           path="coach"
           element={

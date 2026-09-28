@@ -26,12 +26,19 @@ describe('parent player pages', () => {
   afterEach(() => setAccessToken(null))
 
   it('lists the parent’s players', async () => {
-    mockBackend({ ...loggedInAs(parentUser), 'GET /api/v1/players': () => jsonResponse([sam]) })
+    mockBackend({
+      ...loggedInAs(parentUser),
+      'GET /api/v1/players': () => jsonResponse([sam]),
+      'GET /api/v1/players/p1': () => jsonResponse({ ...sam, programs: [program] }),
+      'GET /api/v1/bookings': () => jsonResponse([]),
+    })
 
     renderAt('/parent', routes)
 
     expect(await screen.findByText('Sam Taylor')).toBeInTheDocument()
     expect(screen.getByText('Born 14 May 2013')).toBeInTheDocument()
+    expect(await screen.findByText('U14 Cricket Development')).toBeInTheDocument()
+    expect(await screen.findByText(/Nothing booked yet/)).toBeInTheDocument()
   })
 
   it('adds a player and opens their page', async () => {

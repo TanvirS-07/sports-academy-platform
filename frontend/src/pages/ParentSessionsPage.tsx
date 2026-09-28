@@ -1,15 +1,49 @@
 import { useQueries } from '@tanstack/react-query'
-import { Link } from 'react-router'
 
+import { Button, ButtonLink } from '../components/Button'
+import { ConfirmAction } from '../components/Confirm'
+import { Notice } from '../components/Notice'
+import { PageHeader } from '../components/PageHeader'
+import { EmptyState, Panel, RowList } from '../components/Panel'
 import { QueryState } from '../components/QueryState'
+import { SessionRow } from '../components/SessionRow'
+import { Tag } from '../components/Tag'
+import { useToast } from '../components/Toast'
 import { useBookings, useBookSession, useCancelBooking } from '../features/bookings/api'
 import { playerQuery, usePlayers } from '../features/players/api'
 import { useSessions, type TrainingSession } from '../features/sessions/api'
-import { placesText } from '../features/sessions/places'
+import { SessionPlaces } from '../features/sessions/SessionPlaces'
 import { errorMessage } from '../lib/errors'
-import { formatSessionTime } from '../lib/sydneyTime'
+import { formatDay, toSydney } from '../lib/sydneyTime'
 
 type Child = { id: string; name: string; programIds: string[] }
+
+const weekFormat = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'long', timeZone: 'UTC' })
+
+/** The Monday of a session's week in Sydney, as "YYYY-MM-DD". */
+function weekOf(iso: string): string {
+  const date = new Date(`${toSydney(iso).date}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7))
+  return date.toISOString().slice(0, 10)
+}
+
+function weekTitle(monday: string): string {
+  const thisWeek = weekOf(new Date().toISOString())
+  if (monday === thisWeek) return 'This week'
+  const next = new Date(`${thisWeek}T00:00:00Z`)
+  next.setUTCDate(next.getUTCDate() + 7)
+  if (monday === next.toISOString().slice(0, 10)) return 'Next week'
+  return `Week of ${weekFormat.format(new Date(`${monday}T00:00:00Z`))}`
+}
+
+function byWeek(sessions: TrainingSession[]): [string, TrainingSession[]][] {
+  const weeks = new Map<string, TrainingSession[]>()
+  for (const session of sessions) {
+    const week = weekOf(session.starts_at)
+    weeks.set(week, [...(weeks.get(week) ?? []), session])
+  }
+  return [...weeks.entries()]
+}
 
 export function ParentSessionsPage() {
   const sessions = useSessions()
@@ -19,6 +53,7 @@ export function ParentSessionsPage() {
   const details = useQueries({ queries: (players.data ?? []).map((player) => playerQuery(player.id)) })
   const book = useBookSession()
   const cancel = useCancelBooking()
+  const toast = useToast()
 
   const children: Child[] = details.flatMap((detail) =>
     detail.data
@@ -29,6 +64,8 @@ export function ParentSessionsPage() {
         }]
       : [],
   )
+  const detailsLoaded = details.every((detail) => !detail.isPending)
+  const enrolledChildren = children.filter((child) => child.programIds.length > 0)
 
   function confirmedBooking(session: TrainingSession, child: Child) {
     return bookings.data?.find(
@@ -37,66 +74,111 @@ export function ParentSessionsPage() {
     )
   }
 
+  function isBooking(session: TrainingSession, child: Child) {
+    return book.isPending && book.variables?.sessionId === session.id && book.variables.playerId === child.id
+  }
+
   const actionError = book.error ?? cancel.error
-  const busy = book.isPending || cancel.isPending
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="space-y-1">
-        <Link to="/parent" className="text-sm text-emerald-700 hover:underline">← My players</Link>
-        <h1 className="text-2xl font-bold">Sessions</h1>
-        <p className="text-slate-600">Upcoming sessions in your children’s programs. Times are Sydney time.</p>
-      </div>
+    <>
+      <PageHeader
+        title="Sessions"
+        description="Upcoming sessions in your children’s programs. Times are Sydney time."
+      />
 
-      <QueryState isPending={sessions.isPending} error={sessions.error ?? bookings.error} />
-      {actionError && (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
-          {errorMessage(actionError)}
-        </p>
-      )}
-      {sessions.data?.length === 0 && (
-        <p className="text-slate-600">No upcoming sessions yet. They’ll show here once a coach adds them.</p>
-      )}
+      <div className="max-w-3xl space-y-6">
+        <QueryState
+          isPending={sessions.isPending || players.isPending}
+          error={sessions.error ?? bookings.error ?? players.error}
+        />
+        {actionError && <Notice tone="danger">{errorMessage(actionError)}</Notice>}
 
-      <ul className="space-y-3">
-        {sessions.data?.map((session) => {
-          const eligible = children.filter((child) => child.programIds.includes(session.program.id))
-          return (
-            <li key={session.id} className="space-y-3 rounded-md border border-slate-200 bg-white px-4 py-3">
-              <div>
-                <p className="font-medium">{formatSessionTime(session.starts_at, session.ends_at)}</p>
-                <p className="text-sm text-slate-500">
-                  {session.program.name} · {session.location} · {placesText(session)}
-                </p>
-              </div>
-              {eligible.map((child) => {
-                const booking = confirmedBooking(session, child)
+        {players.data?.length === 0 && (
+          <Panel>
+            <EmptyState action={<ButtonLink to="/parent/players/new">Add player</ButtonLink>}>
+              Add your child first. Once their coach enrols them in a program, its sessions show here.
+            </EmptyState>
+          </Panel>
+        )}
+        {players.data && players.data.length > 0 && detailsLoaded && enrolledChildren.length === 0 && (
+          <Notice tone="info">
+            {children.map((child) => child.name).join(' and ')} {children.length === 1 ? 'isn’t' : 'aren’t'} in a
+            program yet. Once their coach enrols them, their sessions show here.
+          </Notice>
+        )}
+        {sessions.data?.length === 0 && enrolledChildren.length > 0 && (
+          <Panel>
+            <EmptyState>No upcoming sessions yet. They’ll show here once a coach adds them.</EmptyState>
+          </Panel>
+        )}
+
+        {byWeek(sessions.data ?? []).map(([week, weekSessions]) => (
+          <Panel key={week} title={weekTitle(week)} id={`week-${week}`}>
+            <RowList>
+              {weekSessions.map((session) => {
+                const eligible = children.filter((child) => child.programIds.includes(session.program.id))
+                const cancelled = session.status === 'CANCELLED'
                 return (
-                  <div key={child.id} className="flex items-center justify-between border-t border-slate-100 pt-2">
-                    <span className="text-sm">
-                      {child.name}: {booking ? 'booked' : 'not booked'}
-                    </span>
-                    {booking ? (
-                      <button type="button" disabled={busy} onClick={() => cancel.mutate(booking.id)}
-                        aria-label={`Cancel booking for ${child.name}`}
-                        className="text-sm font-medium text-red-700 hover:underline disabled:opacity-60">
-                        Cancel booking
-                      </button>
-                    ) : (
-                      <button type="button" disabled={busy || session.available === 0}
-                        onClick={() => book.mutate({ sessionId: session.id, playerId: child.id })}
-                        aria-label={`Book ${child.name}`}
-                        className="rounded-md bg-emerald-700 px-3 py-1 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60">
-                        {session.available === 0 ? 'Full' : 'Book'}
-                      </button>
+                  <SessionRow
+                    key={session.id}
+                    startsAt={session.starts_at}
+                    endsAt={session.ends_at}
+                    muted={cancelled}
+                    detail={
+                      <>
+                        <span className="font-medium text-ink">{session.program.name}</span> · {session.location}
+                      </>
+                    }
+                    aside={<SessionPlaces session={session} />}
+                  >
+                    {!cancelled && eligible.length > 0 && (
+                      <ul className="mt-3 space-y-2">
+                        {eligible.map((child) => {
+                          const booking = confirmedBooking(session, child)
+                          return (
+                            <li key={child.id} className="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-2">
+                              {booking ? (
+                                <>
+                                  <Tag tone="success">{child.name} booked</Tag>
+                                  <ConfirmAction
+                                    label="Cancel"
+                                    ariaLabel={`Cancel booking for ${child.name}`}
+                                    question={`Cancel ${child.name}’s place?`}
+                                    confirmLabel="Cancel booking"
+                                    busy={cancel.isPending}
+                                    onConfirm={() =>
+                                      cancel.mutate(booking.id, {
+                                        onSuccess: () =>
+                                          toast(`${child.name}’s booking for ${formatDay(session.starts_at)} is cancelled.`),
+                                      })
+                                    }
+                                  />
+                                </>
+                              ) : (
+                                <Button size="sm" variant={session.available === 0 ? 'secondary' : 'primary'}
+                                  disabled={isBooking(session, child) || session.available === 0}
+                                  onClick={() =>
+                                    book.mutate(
+                                      { sessionId: session.id, playerId: child.id },
+                                      { onSuccess: () => toast(`${child.name} is booked for ${formatDay(session.starts_at)}.`) },
+                                    )
+                                  }>
+                                  {isBooking(session, child) ? 'Booking…' : `Book ${child.name}`}
+                                </Button>
+                              )}
+                            </li>
+                          )
+                        })}
+                      </ul>
                     )}
-                  </div>
+                  </SessionRow>
                 )
               })}
-            </li>
-          )
-        })}
-      </ul>
-    </div>
+            </RowList>
+          </Panel>
+        ))}
+      </div>
+    </>
   )
 }

@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
-import { HomePage } from './HomePage'
+import { StatusPage } from './StatusPage'
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -21,14 +22,22 @@ function mockBackend(responses: Record<string, () => Promise<Response>>) {
   )
 }
 
-describe('HomePage', () => {
+function renderStatus() {
+  return render(
+    <MemoryRouter>
+      <StatusPage />
+    </MemoryRouter>,
+  )
+}
+
+describe('StatusPage', () => {
   it('shows OK for the API and database when both are healthy', async () => {
     mockBackend({
       '/api/v1/health': async () => jsonResponse({ status: 'ok' }),
       '/api/v1/health/db': async () => jsonResponse({ status: 'ok', database: 'ok' }),
     })
 
-    render(<HomePage />)
+    renderStatus()
 
     expect(await screen.findByTestId('api-status')).toHaveTextContent('OK')
     expect(screen.getByTestId('database-status')).toHaveTextContent('OK')
@@ -41,7 +50,7 @@ describe('HomePage', () => {
         jsonResponse({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Database is unavailable' } }, 503),
     })
 
-    render(<HomePage />)
+    renderStatus()
 
     expect(await screen.findByText('Database is unavailable')).toBeInTheDocument()
     expect(screen.getByTestId('api-status')).toHaveTextContent('OK')
@@ -54,7 +63,7 @@ describe('HomePage', () => {
       '/api/v1/health/db': async () => Promise.reject(new TypeError('Failed to fetch')),
     })
 
-    render(<HomePage />)
+    renderStatus()
 
     expect(await screen.findAllByText('Unable to reach the server')).toHaveLength(2)
     expect(screen.getByTestId('api-status')).toHaveTextContent('Unavailable')
@@ -64,7 +73,7 @@ describe('HomePage', () => {
   it('shows a checking state while requests are in flight', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
 
-    render(<HomePage />)
+    renderStatus()
 
     expect(screen.getByTestId('api-status')).toHaveTextContent('Checking…')
     expect(screen.getByTestId('database-status')).toHaveTextContent('Checking…')

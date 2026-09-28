@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 
-import { FormError, FormField, SubmitButton } from '../../components/FormField'
+import { FormActions, FormError, FormField } from '../../components/FormField'
 import { errorMessage } from '../../lib/errors'
 import { sydneyToUtc, toSydney } from '../../lib/sydneyTime'
 import type { SessionData } from './api'
@@ -9,6 +9,7 @@ type Props = {
   initial?: SessionData
   submitLabel: string
   onSubmit: (data: SessionData) => Promise<unknown>
+  onCancel?: () => void
 }
 
 type Fields = { date: string; start: string; end: string; location: string; capacity: string }
@@ -26,7 +27,7 @@ function toFields(initial?: SessionData): Fields {
 }
 
 /** Times are typed in Sydney time and sent to the API in UTC. */
-export function SessionForm({ initial, submitLabel, onSubmit }: Props) {
+export function SessionForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
   const [form, setForm] = useState(() => toFields(initial))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -71,10 +72,10 @@ export function SessionForm({ initial, submitLabel, onSubmit }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <FormError message={error} />
       <FormField label="Date" name="date" type="date" required value={form.date} onChange={update('date')} />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <FormField label="Start time" name="start" type="time" required value={form.start}
           onChange={update('start')} hint="Sydney time" />
         <FormField label="End time" name="end" type="time" required value={form.end}
@@ -84,7 +85,7 @@ export function SessionForm({ initial, submitLabel, onSubmit }: Props) {
         value={form.location} onChange={update('location')} />
       <FormField label="Capacity" name="capacity" type="number" min={1} max={100} required
         value={form.capacity} onChange={update('capacity')} hint="How many players can book" />
-      <SubmitButton busy={busy}>{submitLabel}</SubmitButton>
+      <FormActions busy={busy} submitLabel={submitLabel} onCancel={onCancel} />
     </form>
   )
 }

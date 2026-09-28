@@ -17,3 +17,13 @@ export function todayIso(): string {
   const day = String(now.getDate()).padStart(2, '0')
   return `${now.getFullYear()}-${month}-${day}`
 }
+
+/** Age in whole years today, from a "YYYY-MM-DD" date of birth. */
+export function ageOn(dateOfBirth: string, today: Date = new Date()): number {
+  const [year, month, day] = dateOfBirth.split('-').map(Number)
+  let age = today.getFullYear() - (year ?? 0)
+  const beforeBirthday =
+    today.getMonth() + 1 < (month ?? 1) || (today.getMonth() + 1 === month && today.getDate() < (day ?? 1))
+  if (beforeBirthday) age -= 1
+  return age
+}

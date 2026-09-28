@@ -2,12 +2,12 @@ import { expect, test } from '@playwright/test'
 
 // Proves the whole Docker Compose stack works together:
 // browser -> Vite frontend -> FastAPI backend -> PostgreSQL.
-test('home page reports the API and database as healthy', async ({ page }) => {
+test('the status page reports the API and database as healthy', async ({ page }) => {
   await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Junior cricket coaching in Sydney' })).toBeVisible()
 
-  await expect(
-    page.getByRole('heading', { name: 'Sports Academy Management Platform' }),
-  ).toBeVisible()
+  await page.getByRole('link', { name: 'System status' }).click()
+  await expect(page).toHaveURL('/status')
   await expect(page.getByTestId('api-status')).toHaveText('OK')
   await expect(page.getByTestId('database-status')).toHaveText('OK')
 })

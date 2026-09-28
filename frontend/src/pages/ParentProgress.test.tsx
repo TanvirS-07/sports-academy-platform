@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { setAccessToken } from '../lib/api'
-import { jsonResponse, loggedInAs, mockBackend, noProgressYet, parentUser, renderAt } from '../test/utils'
+import { fullText, jsonResponse, loggedInAs, mockBackend, noProgressYet, parentUser, renderAt } from '../test/utils'
 import { PlayerPage } from './PlayerPage'
 
 const routes = [{ path: '/parent/players/:playerId', element: <PlayerPage /> }]
@@ -54,11 +54,12 @@ describe('parent progress', () => {
     renderAt('/parent/players/p1', routes)
 
     expect(await screen.findByText('Attended 1 of 2 sessions')).toBeInTheDocument()
-    expect(screen.getByText('Saturday 26 September, 10:00 am to 11:30 am')).toBeInTheDocument()
+    expect(screen.getByText(fullText('Saturday 26 September, 10:00 am to 11:30 am'))).toBeInTheDocument()
     expect(screen.getByText('Absent')).toBeInTheDocument()
     expect(screen.getAllByText('U14 Cricket Development · Main oval')).toHaveLength(2)
     expect(await screen.findByText('Front foot drive')).toBeInTheDocument()
-    expect(screen.getByText('Coach Chris Lee · U14 Cricket Development')).toBeInTheDocument()
+    expect(screen.getByText('Coach Chris Lee')).toBeInTheDocument()
+    expect(screen.getAllByText('U14 Cricket Development').length).toBeGreaterThan(0)
     expect(screen.getByText('Areas to improve')).toBeInTheDocument()
     expect(screen.queryByText('Progress')).not.toBeInTheDocument()
     // Only the "Edit" for the child's profile. Parents can't change notes.

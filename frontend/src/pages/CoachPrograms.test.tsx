@@ -35,12 +35,17 @@ describe('coach program pages', () => {
   afterEach(() => setAccessToken(null))
 
   it('lists the coach’s programs', async () => {
-    mockBackend({ ...loggedInAs(coachUser), 'GET /api/v1/programs': () => jsonResponse([program]) })
+    mockBackend({
+      ...loggedInAs(coachUser),
+      'GET /api/v1/programs': () => jsonResponse([program]),
+      'GET /api/v1/sessions': () => jsonResponse([]),
+    })
 
     renderAt('/coach', routes)
 
     expect(await screen.findByText('U14 Cricket Development')).toBeInTheDocument()
-    expect(screen.getByText('Cricket · Under 14')).toBeInTheDocument()
+    expect(screen.getByText('Under 14')).toBeInTheDocument()
+    expect(await screen.findByText('No sessions scheduled yet.')).toBeInTheDocument()
   })
 
   it('creates a program with the only sport picked for them', async () => {
@@ -81,8 +86,11 @@ describe('coach program pages', () => {
 
     renderAt('/coach/programs/g1', routes)
 
-    expect(await screen.findByText('Born 14 May 2013')).toBeInTheDocument()
+    expect(await screen.findByText('14 May 2013')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Make inactive: Sam Taylor' }))
+    expect(screen.getByText('Make Sam inactive? Their upcoming bookings are cancelled.')).toBeInTheDocument()
+    expect(callsTo(fetchMock, 'PATCH /api/v1/programs/g1/players/p1')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Make inactive' }))
 
     await expect.poll(() => callsTo(fetchMock, 'PATCH /api/v1/programs/g1/players/p1').length).toBe(1)
     expect(JSON.parse(firstCallTo(fetchMock, 'PATCH /api/v1/programs/g1/players/p1').body as string)).toEqual({
@@ -119,7 +127,7 @@ describe('coach program pages', () => {
     fireEvent.click(firstEnrol!)
 
     const players = await screen.findByRole('button', { name: 'Make inactive: Sam Taylor' })
-    expect(within(players.closest('li')!).getByText('Born 14 May 2013')).toBeInTheDocument()
+    expect(within(players.closest('tr')!).getByText('14 May 2013')).toBeInTheDocument()
     expect(JSON.parse(firstCallTo(fetchMock, 'POST /api/v1/players/search').body as string)).toEqual({
       query: 'sam',
     })

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 
 import { homePathFor } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
+import { AuthLayout } from '../components/AuthLayout'
 import { FormError, FormField, SubmitButton } from '../components/FormField'
 import { errorMessage } from '../lib/errors'
 
@@ -31,9 +32,8 @@ export function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm space-y-6">
-      <h1 className="text-2xl font-bold">Log in</h1>
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <AuthLayout title="Log in" description="For parents and coaches of Precision Cricket Academy.">
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <FormError message={error} />
         <FormField
           label="Email"
@@ -53,14 +53,14 @@ export function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <SubmitButton busy={busy}>Log in</SubmitButton>
+        <SubmitButton busy={busy} busyLabel="Logging in…">Log in</SubmitButton>
       </form>
-      <p className="text-sm text-slate-600">
+      <p className="mt-8 border-t border-line pt-6 text-sm text-ink-muted">
         New parent?{' '}
-        <Link to="/register" className="font-medium text-emerald-700 hover:underline">
+        <Link to="/register" className="font-semibold text-brand underline-offset-4 hover:underline">
           Create an account
         </Link>
       </p>
-    </div>
+    </AuthLayout>
   )
 }

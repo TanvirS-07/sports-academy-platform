@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { setAccessToken } from '../lib/api'
-import { callsTo, coachUser, firstCallTo, jsonResponse, loggedInAs, mockBackend, renderAt } from '../test/utils'
+import { callsTo, coachUser, firstCallTo, fullText, jsonResponse, loggedInAs, mockBackend, renderAt } from '../test/utils'
 import { CoachSessionPage } from './CoachSessionPage'
 import { NewSessionPage } from './NewSessionPage'
 import { ProgramPage } from './ProgramPage'
@@ -61,8 +61,10 @@ describe('coach session pages', () => {
 
     renderAt('/coach/programs/g1', routes)
 
-    expect(await screen.findByText('Saturday 9 November, 10:00 am to 11:30 am')).toBeInTheDocument()
-    expect(screen.getByText('Main oval · 7 of 10 booked, 3 left')).toBeInTheDocument()
+    expect(await screen.findByText(fullText('Saturday 9 November, 10:00 am to 11:30 am'))).toBeInTheDocument()
+    expect(screen.getByText('Main oval')).toBeInTheDocument()
+    expect(screen.getByText('7 / 10 places')).toBeInTheDocument()
+    expect(screen.getByText('3 left')).toBeInTheDocument()
   })
 
   it('creates a session and sends the times in UTC', async () => {
@@ -118,6 +120,8 @@ describe('coach session pages', () => {
 
     renderAt('/coach/sessions/x1', routes)
     fireEvent.click(await screen.findByRole('button', { name: 'Cancel booking: Sam Taylor' }))
+    expect(callsTo(fetchMock, 'POST /api/v1/bookings/b1/cancel')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
 
     expect(await screen.findByText('Nobody has booked yet.')).toBeInTheDocument()
     expect(callsTo(fetchMock, 'POST /api/v1/bookings/b1/cancel')).toHaveLength(1)

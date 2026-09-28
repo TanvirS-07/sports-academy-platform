@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 
 import { homePathFor } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
+import { AuthLayout } from '../components/AuthLayout'
 import { FormError, FormField, SubmitButton } from '../components/FormField'
 import { errorMessage } from '../lib/errors'
 
@@ -38,14 +39,13 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold">Create a parent account</h1>
-        <p className="text-sm text-slate-600">Coach accounts are set up by the academy.</p>
-      </div>
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <AuthLayout
+      title="Create a parent account"
+      description="Coach accounts are set up by the academy."
+    >
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <FormError message={error} />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="First name" name="first_name" autoComplete="given-name" required
             value={form.first_name} onChange={update('first_name')} />
           <FormField label="Last name" name="last_name" autoComplete="family-name" required
@@ -56,14 +56,14 @@ export function RegisterPage() {
         <FormField label="Password" name="password" type="password" autoComplete="new-password"
           required hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
           value={form.password} onChange={update('password')} />
-        <SubmitButton busy={busy}>Create account</SubmitButton>
+        <SubmitButton busy={busy} busyLabel="Creating account…">Create account</SubmitButton>
       </form>
-      <p className="text-sm text-slate-600">
+      <p className="mt-8 border-t border-line pt-6 text-sm text-ink-muted">
         Already have an account?{' '}
-        <Link to="/login" className="font-medium text-emerald-700 hover:underline">
+        <Link to="/login" className="font-semibold text-brand underline-offset-4 hover:underline">
           Log in
         </Link>
       </p>
-    </div>
+    </AuthLayout>
   )
 }

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 
+import { Button } from '../../components/Button'
 import { FormError, SubmitButton } from '../../components/FormField'
 import { errorMessage } from '../../lib/errors'
 import { attendanceLabels, type AttendanceMark, type AttendanceStatus, type SessionAttendanceRow } from './api'
@@ -47,20 +48,34 @@ export function AttendanceForm({ rows, onSave }: Props) {
     }
   }
 
+  const unmarked = rows.filter(({ player }) => !marks[player.id]).length
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <FormError message={error} />
-      <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+    <form onSubmit={handleSubmit}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
+        <p className="text-sm text-ink-muted" aria-live="polite">
+          {unmarked === 0 ? 'Everyone is marked.' : `${unmarked} of ${rows.length} not marked yet.`}
+        </p>
+        <Button size="sm" variant="secondary" disabled={unmarked === 0}
+          onClick={() => {
+            setMarks(Object.fromEntries(rows.map(({ player }) => [player.id, marks[player.id] ?? 'PRESENT'])))
+            setSaved(false)
+          }}>
+          Mark the rest present
+        </Button>
+      </div>
+      <ul className="divide-y divide-line">
         {rows.map(({ player }) => {
           const name = `${player.first_name} ${player.last_name}`
           return (
             <li key={player.id}>
-              <fieldset className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-                <legend className="float-left font-medium">{name}</legend>
-                <div className="flex gap-1">
+              <fieldset className="grid items-center gap-2 px-4 py-3 sm:grid-cols-[1fr_auto] sm:px-5">
+                <legend className="sr-only">{name}</legend>
+                <span aria-hidden="true" className="font-semibold">{name}</span>
+                <div className="grid grid-cols-3 overflow-hidden rounded-md border border-control sm:inline-grid">
                   {statuses.map((status) => (
                     <label key={status}
-                      className="cursor-pointer rounded-md border border-slate-300 px-3 py-1 text-sm has-[:checked]:border-emerald-700 has-[:checked]:bg-emerald-700 has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-emerald-600">
+                      className={`flex h-10 cursor-pointer items-center justify-center border-l border-control px-4 text-sm font-medium transition-colors first:border-l-0 hover:bg-subtle has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-brand ${selectedClasses[status]}`}>
                       <input type="radio" name={`attendance-${player.id}`} value={status} className="sr-only"
                         checked={marks[player.id] === status} onChange={() => mark(player.id, status)} />
                       {attendanceLabels[status]}
@@ -72,8 +87,17 @@ export function AttendanceForm({ rows, onSave }: Props) {
           )
         })}
       </ul>
-      {saved && <p role="status" className="text-sm text-emerald-800">Attendance saved.</p>}
-      <SubmitButton busy={busy}>Save attendance</SubmitButton>
+      <div className="sticky bottom-0 flex flex-col gap-3 border-t border-line bg-surface px-4 py-3 sm:flex-row sm:items-center sm:px-5">
+        <SubmitButton busy={busy} full={false}>Save attendance</SubmitButton>
+        {saved && <p role="status" className="text-sm font-medium text-success">Attendance saved.</p>}
+        <div className="sm:flex-1"><FormError message={error} /></div>
+      </div>
     </form>
   )
+}
+
+const selectedClasses: Record<AttendanceStatus, string> = {
+  PRESENT: 'has-[:checked]:bg-success has-[:checked]:text-white',
+  ABSENT: 'has-[:checked]:bg-ink has-[:checked]:text-white',
+  EXCUSED: 'has-[:checked]:bg-brand-soft has-[:checked]:text-brand',
 }

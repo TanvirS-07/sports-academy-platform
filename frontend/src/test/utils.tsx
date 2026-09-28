@@ -101,3 +101,9 @@ export const noProgressYet: Record<string, Handler> = {
     jsonResponse({ summary: { present: 0, absent: 0, excused: 0, total: 0 }, records: [] }),
   'GET /api/v1/players/p1/development-notes': () => jsonResponse([]),
 }
+
+/** Matches the element whose whole text is `text`, even when it's split across spans. */
+export function fullText(text: string) {
+  return (_content: string, element: Element | null) =>
+    element?.textContent === text && ![...element.children].some((child) => child.textContent === text)
+}

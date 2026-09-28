@@ -1,7 +1,14 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 
+import { Button } from '../components/Button'
+import { ConfirmAction } from '../components/Confirm'
+import { Notice } from '../components/Notice'
+import { PageHeader } from '../components/PageHeader'
+import { EmptyState, Panel, PanelBody, RowList } from '../components/Panel'
 import { QueryState } from '../components/QueryState'
+import { Tag } from '../components/Tag'
+import { useToast } from '../components/Toast'
 import { useSaveAttendance, useSessionAttendance } from '../features/attendance/api'
 import { AttendanceForm } from '../features/attendance/AttendanceForm'
 import { useCancelBooking } from '../features/bookings/api'
@@ -9,7 +16,7 @@ import { useCancelSession, useSession, useSessionBookings, useUpdateSession } fr
 import { placesText } from '../features/sessions/places'
 import { SessionForm } from '../features/sessions/SessionForm'
 import { errorMessage } from '../lib/errors'
-import { formatSessionTime } from '../lib/sydneyTime'
+import { formatDay, formatTimeRange } from '../lib/sydneyTime'
 
 export function CoachSessionPage() {
   const { sessionId = '' } = useParams()
@@ -18,8 +25,8 @@ export function CoachSessionPage() {
   const updateSession = useUpdateSession(sessionId)
   const cancelSession = useCancelSession(sessionId)
   const cancelBooking = useCancelBooking()
+  const toast = useToast()
   const [editing, setEditing] = useState(false)
-  const [confirmingCancel, setConfirmingCancel] = useState(false)
 
   const actionError = cancelSession.error ?? cancelBooking.error
   const scheduled = session.data?.status === 'SCHEDULED'
@@ -30,114 +37,120 @@ export function CoachSessionPage() {
   const saveAttendance = useSaveAttendance(sessionId)
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      {session.data && (
-        <Link to={`/coach/programs/${session.data.program.id}`} className="text-sm text-emerald-700 hover:underline">
-          ← {session.data.program.name}
-        </Link>
-      )}
+    <>
       <QueryState isPending={session.isPending} error={session.error} />
 
       {session.data && (
         <>
-          <div className="space-y-3">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <h1 className="text-2xl font-bold">{formatSessionTime(session.data.starts_at, session.data.ends_at)}</h1>
-                <p className="text-slate-600">{session.data.location} · {placesText(session.data)}</p>
-              </div>
-              {upcoming && !editing && (
-                <button type="button" onClick={() => setEditing(true)}
-                  className="text-sm font-medium text-emerald-700 hover:underline">
-                  Edit
-                </button>
-              )}
-            </div>
-            {editing && (
-              <SessionForm
-                initial={session.data}
-                submitLabel="Save changes"
-                onSubmit={async (data) => {
-                  await updateSession.mutateAsync(data)
-                  setEditing(false)
-                }}
-              />
-            )}
-          </div>
+          <PageHeader
+            back={{ label: session.data.program.name, to: `/coach/programs/${session.data.program.id}` }}
+            title={formatDay(session.data.starts_at)}
+            tabTitle={`${formatDay(session.data.starts_at)} · ${session.data.program.name}`}
+            description={
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="font-semibold text-ink tabular-nums">
+                  {formatTimeRange(session.data.starts_at, session.data.ends_at)}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>{session.data.location}</span>
+                {scheduled && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="tabular-nums">{placesText(session.data)}</span>
+                  </>
+                )}
+                {!scheduled && <Tag tone="danger">Cancelled</Tag>}
+              </span>
+            }
+            actions={upcoming && !editing && <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
+          />
+
+          {editing && (
+            <Panel title="Edit session" id="edit-session" className="mb-8 max-w-2xl">
+              <PanelBody className="py-5">
+                <SessionForm
+                  initial={session.data}
+                  submitLabel="Save changes"
+                  onCancel={() => setEditing(false)}
+                  onSubmit={async (data) => {
+                    await updateSession.mutateAsync(data)
+                    setEditing(false)
+                    toast('Session saved.')
+                  }}
+                />
+              </PanelBody>
+            </Panel>
+          )}
 
           {actionError && (
-            <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
-              {errorMessage(actionError)}
-            </p>
+            <div className="mb-6">
+              <Notice tone="danger">{errorMessage(actionError)}</Notice>
+            </div>
           )}
 
-          {started && (
-            <section className="space-y-3">
-              <h2 className="text-lg font-semibold">Attendance</h2>
-              <QueryState isPending={attendance.isPending} error={attendance.error} />
-              {attendance.data?.length === 0 && <p className="text-slate-600">Nobody was booked into this session.</p>}
-              {attendance.data && attendance.data.length > 0 && (
-                <AttendanceForm rows={attendance.data} onSave={(records) => saveAttendance.mutateAsync(records)} />
-              )}
-            </section>
-          )}
+          <div className="max-w-3xl space-y-6">
+            {started && (
+              <Panel title="Attendance" id="attendance">
+                <QueryState isPending={attendance.isPending} error={attendance.error} />
+                {attendance.data?.length === 0 && <EmptyState>Nobody was booked into this session.</EmptyState>}
+                {attendance.data && attendance.data.length > 0 && (
+                  <AttendanceForm rows={attendance.data} onSave={(records) => saveAttendance.mutateAsync(records)} />
+                )}
+              </Panel>
+            )}
 
-          {!started && (
-            <section className="space-y-3">
-              <h2 className="text-lg font-semibold">Booked players</h2>
-              <QueryState isPending={bookings.isPending} error={bookings.error} />
-              {bookings.data?.length === 0 && <p className="text-slate-600">Nobody has booked yet.</p>}
-              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
-                {bookings.data?.map((booking) => {
-                  const name = `${booking.player.first_name} ${booking.player.last_name}`
-                  return (
-                    <li key={booking.id} className="flex items-center justify-between px-4 py-3">
-                      <span className="font-medium">{name}</span>
-                      {upcoming && (
-                        <button type="button" disabled={cancelBooking.isPending}
-                          onClick={() => cancelBooking.mutate(booking.id)}
-                          aria-label={`Cancel booking: ${name}`}
-                          className="text-sm font-medium text-red-700 hover:underline disabled:opacity-60">
-                          Cancel booking
-                        </button>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-              {upcoming && <p className="text-sm text-slate-500">You can mark attendance once the session starts.</p>}
-            </section>
-          )}
-
-          {upcoming && (
-            <section className="space-y-2">
-              {confirmingCancel ? (
-                <div className="space-y-2 rounded-md border border-red-200 bg-red-50 p-4">
-                  <p className="text-sm text-red-900">
-                    Cancel this session? Every booking for it will be cancelled too.
+            {!started && (
+              <Panel title="Booked players" id="booked">
+                <QueryState isPending={bookings.isPending} error={bookings.error} />
+                {bookings.data?.length === 0 && <EmptyState>Nobody has booked yet.</EmptyState>}
+                <RowList>
+                  {bookings.data?.map((booking) => {
+                    const name = `${booking.player.first_name} ${booking.player.last_name}`
+                    return (
+                      <li key={booking.id} className="flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 sm:px-5">
+                        <span className="font-semibold">{name}</span>
+                        {upcoming && (
+                          <ConfirmAction
+                            label="Cancel booking"
+                            ariaLabel={`Cancel booking: ${name}`}
+                            question={`Remove ${booking.player.first_name} from this session?`}
+                            confirmLabel="Remove"
+                            busy={cancelBooking.isPending}
+                            onConfirm={() =>
+                              cancelBooking.mutate(booking.id, { onSuccess: () => toast(`${name}’s booking was cancelled.`) })
+                            }
+                          />
+                        )}
+                      </li>
+                    )
+                  })}
+                </RowList>
+                {upcoming && (
+                  <p className="border-t border-line px-4 py-3 text-[13px] text-ink-muted sm:px-5">
+                    You can mark attendance once the session starts.
                   </p>
-                  <div className="flex gap-3">
-                    <button type="button" disabled={cancelSession.isPending}
-                      onClick={() => cancelSession.mutate(undefined, { onSettled: () => setConfirmingCancel(false) })}
-                      className="rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60">
-                      Yes, cancel it
-                    </button>
-                    <button type="button" onClick={() => setConfirmingCancel(false)}
-                      className="text-sm font-medium text-slate-700 hover:underline">
-                      Keep it
-                    </button>
-                  </div>
+                )}
+              </Panel>
+            )}
+
+            {upcoming && (
+              <div className="flex flex-col gap-3 rounded-lg border border-line px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div>
+                  <p className="font-semibold">Cancel this session</p>
+                  <p className="text-sm text-ink-muted">Every booking for it is cancelled too, and parents see it as cancelled.</p>
                 </div>
-              ) : (
-                <button type="button" onClick={() => setConfirmingCancel(true)}
-                  className="text-sm font-medium text-red-700 hover:underline">
-                  Cancel session
-                </button>
-              )}
-            </section>
-          )}
+                <ConfirmAction
+                  label="Cancel session"
+                  question="Cancel it for everyone?"
+                  confirmLabel="Yes, cancel it"
+                  busy={cancelSession.isPending}
+                  onConfirm={() => cancelSession.mutate(undefined, { onSuccess: () => toast('Session cancelled.') })}
+                />
+              </div>
+            )}
+          </div>
         </>
       )}
-    </div>
+    </>
   )
 }
