@@ -208,7 +208,7 @@ Payments come after the MVP. The database schema is built up over time: each tab
 * **Frontend (Vitest):** component, utility and UI behaviour tests.
 * **End-to-end (Playwright):** login, a coach creating a session, a parent booking a session, full-session behaviour, attendance, and role-based access.
 
-So far, Phases 1 to 3 cover health checks and database tests, registration, login, role checks, players, programs, enrolment and ownership checks on the backend, frontend tests for the forms, route guards and the player and program pages, and Playwright tests for sign-up, login, role-based access and a coach enrolling a parent's child.
+So far, Phases 1 to 4 cover health checks and database tests, registration, login, role checks, players, programs, enrolment, sessions, bookings and ownership checks on the backend, a test where several parents book the last places at the same moment, frontend tests for the forms, route guards, Sydney time and the player, program, session and booking pages, and Playwright tests for sign-up, login, role-based access, a coach enrolling a parent's child, and two parents trying to book the last place in a session.
 
 ## 10. Technology
 
@@ -240,7 +240,7 @@ The backend handles authentication and authorisation. The frontend only talks to
 | **2. Authentication** (done) | User model, parent registration, login, password hashing, JWT access tokens, role-based authorisation, coach creation script |
 | **2b. Refresh tokens** (done) | Refresh tokens, rotation, revocation (logout) |
 | **3. Core management** (done) | Players, parent–player relationships, training programs, program enrolment (`program_players`) |
-| **4. Sessions and bookings** | Sessions, session capacity, bookings, booking validation, handling concurrent bookings |
+| **4. Sessions and bookings** (done) | Sessions, session capacity, bookings, booking validation, handling concurrent bookings |
 | **5. Attendance and development** | Attendance records, development notes, player progress |
 | **6. Payments** | Invoices, payment status, payment history |
 | **7. Deployment** | Production configuration, choosing a hosting provider, Terraform, deployment pipeline, monitoring and logging |

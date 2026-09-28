@@ -38,6 +38,8 @@ backend/
     players/       players, parent links and the coach search
     sports/        sports list
     programs/      programs and enrolments
+    sessions/      training sessions
+    bookings/      bookings and cancellations
     policies.py    ownership checks
   alembic/         migrations
   scripts/         create_coach.py
@@ -46,16 +48,16 @@ frontend/
   src/
     auth/          login state, route guards
     components/    Layout, form fields
-    features/      API hooks and forms for players and programs
+    features/      API hooks and forms for players, programs, sessions and bookings
     pages/         one component per page
-    lib/           fetch wrapper (api.ts), TanStack Query setup, dates, error messages
+    lib/           fetch wrapper (api.ts), TanStack Query setup, dates, Sydney time, error messages
   e2e/             Playwright tests
 docker/            Postgres init script
 docs/              specification, architecture, ADRs
 .github/           CI workflow, Dependabot
 ```
 
-Each backend feature has its own folder with `router.py`, `schemas.py`, `models.py` and `service.py` (`app/auth/`, `app/users/`, `app/players/`, `app/sports/` and `app/programs/` so far). Ownership checks are in `app/policies.py`. On the frontend, `src/features/` holds the API hooks and forms for each feature, and `src/pages/` holds the pages.
+Each backend feature has its own folder with `router.py`, `schemas.py`, `models.py` and `service.py` (`app/auth/`, `app/users/`, `app/players/`, `app/sports/`, `app/programs/`, `app/sessions/` and `app/bookings/` so far). Ownership checks are in `app/policies.py`. On the frontend, `src/features/` holds the API hooks and forms for each feature, and `src/pages/` holds the pages.
 
 ## 3. Backend
 
@@ -98,9 +100,15 @@ Each feature is split into three parts. The router handles HTTP. The service hol
 * Parents have a "My players" list, a form to add a player, and a page for each player with their programs.
 * Coaches have a "My programs" list, a form to create or edit a program, and a page for each program with its players, a search to enrol a player, and a button to make an enrolment inactive or active again.
 
+**Implemented in Phase 4:**
+
+* `src/lib/sydneyTime.ts` shows times in Sydney time and turns a date and time typed in Sydney time into UTC for the API. It uses the browser's built-in `Intl` time zone data, so it handles daylight saving without a date library. A time that doesn't exist because the clocks went forward is rejected by the form.
+* Coaches see a program's upcoming sessions on the program page, can add a session, and have a page for each session with the booked players, an edit form, a button to cancel a booking and a button to cancel the session (which asks first).
+* Parents have a "Sessions" page with the upcoming sessions in their children's programs, the places left, and a Book or Cancel button for each child in that program. Each child's page lists their upcoming bookings.
+
 ## 5. Database
 
-**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. The `users` table was added in Phase 2, `refresh_tokens` in Phase 2b, and `players`, `parent_players`, `sports`, `programs` and `program_players` in Phase 3.
+**Implemented:** PostgreSQL 17 in Docker, with a separate `academy_test` database for tests. The `users` table was added in Phase 2, `refresh_tokens` in Phase 2b, and `players`, `parent_players`, `sports`, `programs` and `program_players` in Phase 3, and `training_sessions` and `bookings` in Phase 4.
 
 **Planned:** tables are added in the phase that needs them.
 
@@ -113,8 +121,8 @@ Each feature is split into three parts. The router handles HTTP. The service hol
 | 3 (done) | `sports` | unique name; the migration adds Cricket; new sports are added by migration |
 | 3 (done) | `programs` | owned by a coach; name, sport, age group, description, training objectives |
 | 3 (done) | `program_players` | enrolment; primary key `(program_id, player_id)`, status ACTIVE / INACTIVE; enrolments are made inactive, not deleted |
-| 4 | `training_sessions` | times stored as `timestamptz`; `capacity` and `booked_count` with CHECK constraints |
-| 4 | `bookings` | status CONFIRMED / CANCELLED; one confirmed booking per player per session |
+| 4 (done) | `training_sessions` | belongs to a program (the coach comes from the program); times stored as `timestamptz`; `capacity` and `booked_count` with CHECK constraints (capacity above 0, booked count between 0 and capacity, end after start); status SCHEDULED / CANCELLED |
+| 4 (done) | `bookings` | player, session and the parent who booked; status CONFIRMED / CANCELLED; a partial unique index allows one confirmed booking per player per session; cancelled bookings are kept |
 | 5 | `attendance` | one record per player per session: PRESENT / ABSENT / EXCUSED |
 | 5 | `development_notes` | written by a coach about a player |
 | 6 | invoices / payments | after the MVP; no payment columns in the core tables |
@@ -128,7 +136,8 @@ player login (users) ── players   (optional, players.user_id)
 ```
 
 * **Enrolment and bookings are separate.** An enrolment (`program_players`) is the lasting link between a player and a program. It decides which players a coach manages. A booking is for one specific session.
-* **Times** are stored in UTC and shown in Sydney time on the frontend.
+* **Times** are stored in UTC and shown in Sydney time on the frontend. The API only accepts times with an offset (for example `+11:00` or `Z`) and always returns UTC, so the backend never guesses a time zone.
+* **Nothing is deleted.** Sessions and bookings are cancelled instead, so attendance in Phase 5 has something to point at.
 * **The table is called `training_sessions`** so it isn't confused with a database session.
 
 ## 6. Authentication (Phase 2 and 2b done)
@@ -151,16 +160,16 @@ player login (users) ── players   (optional, players.user_id)
   * Old token rows aren't cleaned up yet. That's fine at this size, and a cleanup job can be added later.
 * **Accounts:** only parents can sign up publicly. Coaches are created with `scripts/create_coach.py`, and player logins are added later by a parent.
 
-## 7. Authorisation (done in Phases 2 and 3)
+## 7. Authorisation (done in Phases 2 to 4)
 
 There are two checks:
 
 1. **Role check:** a FastAPI dependency, for example `require_role(Role.COACH)`. A wrong role returns `403`.
-2. **Ownership check:** functions in `app/policies.py`. So far there's `can_act_for_player` (a parent linked to the player) and `can_manage_program` (the coach who owns the program). Phase 4 adds checks for sessions and bookings.
+2. **Ownership check:** functions in `app/policies.py`. There's `can_act_for_player` (a parent linked to the player), `can_manage_program` (the coach who owns the program), `can_manage_session` (the coach who owns the session's program) and `can_view_session` (that coach, or a parent with a child actively enrolled in the program).
 
 If a user asks for something they aren't allowed to see, the API returns `404` so it doesn't reveal that the record exists. List endpoints only return the user's own records.
 
-**Children's details:** a player's date of birth is only returned to their parents and to the coach of a program they're actively enrolled in. Coaches find players to enrol with a name search, which returns the name and the parents' first names only. The search is a `POST` so children's names don't end up in URLs or server logs.
+**Children's details:** a player's date of birth is only returned to their parents and to the coach of a program they're actively enrolled in. Coaches find players to enrol with a name search, which returns the name and the parents' first names only. The search is a `POST` so children's names don't end up in URLs or server logs. Session and booking responses only include the player's name, never their date of birth.
 
 ## 8. REST API
 
@@ -183,6 +192,15 @@ If a user asks for something they aren't allowed to see, the API returns `404` s
 | GET, PATCH | `/api/v1/programs/{id}` | Coaches: one of their programs, or edit it. `404 PROGRAM_NOT_FOUND` for anyone else's |
 | GET, POST | `/api/v1/programs/{id}/players` | The program's coach: list enrolments, or enrol a player (`201`, `409 ALREADY_ENROLLED`, or `422 PLAYER_NOT_FOUND`). Enrolling an inactive player makes them active again |
 | PATCH | `/api/v1/programs/{id}/players/{player_id}` | The program's coach: set the status to `ACTIVE` or `INACTIVE`, or `404 ENROLMENT_NOT_FOUND` |
+| GET | `/api/v1/sessions` | Coaches: their upcoming sessions (`?program_id=` and `?include_past=true` are optional). Parents: upcoming scheduled sessions in programs one of their children is actively enrolled in |
+| POST | `/api/v1/sessions` | Coaches: add a session to one of their programs (`201`, `422 INVALID_TIMES` or `422 PROGRAM_NOT_FOUND`) |
+| GET | `/api/v1/sessions/{id}` | The session's coach, or a parent with a child in the program. `404 SESSION_NOT_FOUND` for anyone else |
+| PATCH | `/api/v1/sessions/{id}` | The session's coach: edit the times, location or capacity. `409 CAPACITY_BELOW_BOOKED`, or `409 SESSION_NOT_EDITABLE` once it's cancelled or has started |
+| POST | `/api/v1/sessions/{id}/cancel` | The session's coach: cancel the session and all its bookings |
+| GET | `/api/v1/sessions/{id}/bookings` | The session's coach: who's booked (names only) |
+| POST | `/api/v1/sessions/{id}/bookings` | Parents: book one of their children, `{"player_id": "..."}`. `201`, `409 SESSION_FULL`, `409 ALREADY_BOOKED`, `409 SESSION_NOT_BOOKABLE`, `422 PLAYER_NOT_ENROLLED` or `422 PLAYER_NOT_FOUND` |
+| GET | `/api/v1/bookings` | Parents: their children's bookings for sessions that haven't finished (`?player_id=` is optional), including cancelled ones |
+| POST | `/api/v1/bookings/{id}/cancel` | The child's parent or the session's coach, before the session starts. `409 BOOKING_NOT_CANCELLABLE` if it's already cancelled or the session has started |
 
 FastAPI also generates API docs at `/docs`.
 
@@ -190,12 +208,11 @@ FastAPI also generates API docs at `/docs`.
 
 | Phase | Endpoints |
 |---|---|
-| 4 | `/sessions`, `/sessions/{id}/cancel`, `/sessions/{id}/bookings`, `/bookings`, `/bookings/{id}/cancel` |
 | 5 | `/sessions/{id}/attendance`, `/players/{id}/attendance`, `/players/{id}/development-notes` |
 
-Session responses will include `capacity`, `booked` and `available`, so the frontend doesn't need to calculate them.
+Session responses include `capacity`, `booked` and `available`, so the frontend doesn't need to calculate them.
 
-## 9. Bookings and session capacity (planned, Phase 4)
+## 9. Bookings and session capacity (done in Phase 4)
 
 Session capacity is the number of players a session can accept (`capacity = 10`, `booked = 7`, `available = 3`). To stop two parents booking the last place at the same time, each booking runs in one transaction:
 
@@ -212,7 +229,9 @@ The database also enforces these:
 * A `CHECK (booked_count <= capacity)` constraint, so an overbooking fails even if the code has a bug.
 * A partial unique index, so a player can't have two confirmed bookings for the same session.
 
-Cancelling a booking uses the same lock and frees the place again.
+Cancelling a booking uses the same lock and frees the place again. Editing a session's capacity and cancelling a session lock the row too, so they can't race with a booking.
+
+`tests/integration/test_booking_concurrency.py` starts eight threads, each with its own database connection, that all try to book a session with one (or three) places at the same moment. Exactly that many succeed and the rest get `SESSION_FULL`. Without the row lock, this test fails.
 
 ## 10. Testing
 
@@ -227,14 +246,15 @@ Cancelling a booking uses the same lock and frees the place again.
   * Registration, login, `/users/me`, the login rate limit, role checks and the coach script.
   * Refresh tokens: the cookie flags, rotation, expiry, reuse detection, inactive users and logout.
   * Players, programs and enrolment, including checks that parents and coaches can't see or change each other's records, that the wrong role gets `403`, and that date of birth isn't shown in search results or for inactive enrolments.
-* **Frontend (Vitest + React Testing Library):** the API client, the home page, the login and register forms, the route guards, restoring the login on load, refresh-and-retry, and the parent player pages and coach program pages.
-* **End-to-end (Playwright):** the home page health checks, the not-found page, parent registration, login and logout, coach login, a parent being kept out of the coach area, staying logged in after a reload, staying logged out after logging out, and a coach enrolling a parent's child in a program, which the parent then sees.
+  * Sessions and bookings: validation, every booking rule, who can see and change what, and the database constraints. A concurrency test (above) checks that capacity is never exceeded.
+* **Frontend (Vitest + React Testing Library):** the API client, the home page, the login and register forms, the route guards, restoring the login on load, refresh-and-retry, the parent player pages and coach program pages, the Sydney time conversion (including both daylight saving changes), the coach session pages and the parent booking pages.
+* **End-to-end (Playwright):** the home page health checks, the not-found page, parent registration, login and logout, coach login, a parent being kept out of the coach area, staying logged in after a reload, staying logged out after logging out, a coach enrolling a parent's child in a program, which the parent then sees, and two parents trying to book the last place in a session.
 
-Each backend test runs inside a transaction that's rolled back afterwards, so tests don't share data.
+Each backend test runs inside a transaction that's rolled back afterwards, so tests don't share data. The concurrency test is the exception: it needs several connections, so it commits its data and deletes it afterwards.
 
 Tests use real PostgreSQL instead of SQLite, because later features depend on row locks and constraints that SQLite handles differently. As a safety measure, the test suite won't run against a database whose name doesn't end in `_test`.
 
-**Planned:** authorisation and business rule tests for sessions and bookings, a concurrent booking test, and Playwright tests for the booking and attendance flows.
+**Planned:** tests for attendance and development notes in Phase 5.
 
 ## 11. Security
 
@@ -243,10 +263,13 @@ Tests use real PostgreSQL instead of SQLite, because later features depend on ro
 * Secrets are kept in `.env`, which is git-ignored. `.env.example` has placeholder values.
 * CORS is off by default, because Vite forwards API requests in development. When it's enabled, only the listed origins are allowed.
 * Dependabot opens pull requests for dependency updates.
+* Passwords are hashed with Argon2, and a wrong password and an unknown email get the same "invalid email or password" message.
+* Failed logins are limited per email (5 a minute) and per IP address (20 a minute, higher because a family or school can share one address). Behind a reverse proxy, uvicorn will need `--forwarded-allow-ips` for the IP limit to see real addresses. That gets set up with hosting.
+* `APP_ENV` must be set, so a missing setting can't quietly run production in development mode. In production the app refuses to start with one of the example JWT secrets from this repo.
+* Docker Compose only exposes the database, backend and frontend ports on `127.0.0.1`, so other computers on the same network can't connect.
 
 **Planned:**
 
-* **Authentication:** Argon2 password hashing, login rate limiting, and a generic "invalid email or password" message.
 * **Input validation:** stricter Pydantic validation on input endpoints.
 * **Children's data:** collect only what's needed, and don't log it or put it in URLs.
 * **Logging:** never log passwords, tokens or full request bodies.
@@ -290,7 +313,7 @@ The provider, hosting setup, secrets storage and costs will be decided in Phase 
 | **2. Authentication** (done) | `users`, parent registration, login, access tokens, role checks, coach script | Auth tests pass and login works |
 | **2b. Refresh tokens** (done) | `refresh_tokens`, rotation, logout | Refresh and revocation tests pass |
 | **3. Core management** (done) | Players, parents, programs, `program_players`, `policies.py` | Coaches can enrol players; authorisation tests pass |
-| **4. Sessions and bookings** | Sessions, session capacity, bookings, cancellation | The concurrent booking test passes |
+| **4. Sessions and bookings** (done) | Sessions, session capacity, bookings, cancellation | The concurrent booking test passes |
 | **5. Attendance and development** | Attendance, development notes | All MVP Playwright flows pass |
 | **6. Payments** | Invoices, payment status | Parents can see invoices |
 | **7. Deployment** | Choose a provider, Terraform, deployment pipeline, monitoring | The app deploys from `main` |
