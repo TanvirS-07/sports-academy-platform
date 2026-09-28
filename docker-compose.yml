@@ -16,7 +16,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-academy_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-academy}
     ports:
-      - "5432:5432"
+      # 127.0.0.1 so only this computer can connect, not others on the same network.
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Runs once, on first start with an empty volume: creates academy_test.
@@ -42,7 +43,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       WATCHFILES_FORCE_POLLING: ${WATCH_POLLING:-false}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
     depends_on:
@@ -62,7 +63,7 @@ services:
       API_PROXY_TARGET: http://backend:8000
       WATCH_POLLING: ${WATCH_POLLING:-false}
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     volumes:
       - ./frontend:/app
       # Keep the container's node_modules instead of the (possibly Windows) host folder.
