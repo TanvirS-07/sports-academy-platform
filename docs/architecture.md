@@ -209,7 +209,7 @@ If a user asks for something they aren't allowed to see, the API returns `404` s
 | GET, PATCH | `/api/v1/programs/{id}` | Coaches: one of their programs, or edit it. `404 PROGRAM_NOT_FOUND` for anyone else's |
 | GET, POST | `/api/v1/programs/{id}/players` | The program's coach: list enrolments, or enrol a player (`201`, `409 ALREADY_ENROLLED`, or `422 PLAYER_NOT_FOUND`). Enrolling an inactive player makes them active again |
 | PATCH | `/api/v1/programs/{id}/players/{player_id}` | The program's coach: set the status to `ACTIVE` or `INACTIVE`, or `404 ENROLMENT_NOT_FOUND`. Going inactive cancels the player's bookings for this program's sessions that haven't started; going active again doesn't bring them back |
-| GET | `/api/v1/sessions` | Coaches: their upcoming sessions (`?program_id=` and `?include_past=true` are optional). Parents: upcoming scheduled sessions in programs one of their children is actively enrolled in |
+| GET | `/api/v1/sessions` | Coaches: their upcoming sessions (`?program_id=` and `?include_past=true` are optional). Parents: upcoming sessions in programs one of their children is actively enrolled in, including cancelled ones |
 | POST | `/api/v1/sessions` | Coaches: add a session to one of their programs (`201`, `422 INVALID_TIMES` or `422 PROGRAM_NOT_FOUND`) |
 | GET | `/api/v1/sessions/{id}` | The session's coach, or a parent with a child in the program. `404 SESSION_NOT_FOUND` for anyone else |
 | PATCH | `/api/v1/sessions/{id}` | The session's coach: edit the times, location or capacity. `409 CAPACITY_BELOW_BOOKED`, or `409 SESSION_NOT_EDITABLE` once it's cancelled or has started |

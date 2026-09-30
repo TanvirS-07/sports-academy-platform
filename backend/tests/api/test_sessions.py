@@ -168,14 +168,17 @@ def test_parent_sees_upcoming_sessions_in_their_childs_active_programs(
 
     visible = make_session(db_session, active)
     make_session(db_session, active, starts_at=datetime.now(UTC) - timedelta(days=1))
-    cancelled = make_session(db_session, active)
+    cancelled = make_session(db_session, active, starts_at=datetime.now(UTC) + timedelta(days=8))
     client.post(f"{SESSIONS_URL}/{cancelled.id}/cancel", headers=auth_header(coach))
     make_session(db_session, inactive)
     make_session(db_session, other)
 
     response = client.get(SESSIONS_URL, headers=auth_header(parent))
 
-    assert [s["id"] for s in response.json()] == [str(visible.id)]
+    assert [(s["id"], s["status"]) for s in response.json()] == [
+        (str(visible.id), "SCHEDULED"),
+        (str(cancelled.id), "CANCELLED"),
+    ]
 
 
 def test_who_can_see_one_session(client: TestClient, db_session: Session) -> None:

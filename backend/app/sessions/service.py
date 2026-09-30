@@ -68,6 +68,7 @@ def list_sessions(
         return list(db.scalars(query))
 
     # Parents see upcoming sessions in programs one of their children is active in.
+    # Cancelled ones are included so parents can see a session was called off.
     active_programs = (
         select(ProgramPlayer.program_id)
         .join(ParentPlayer, ParentPlayer.player_id == ProgramPlayer.player_id)
@@ -75,7 +76,6 @@ def list_sessions(
     )
     query = query.where(
         TrainingSession.program_id.in_(active_programs),
-        TrainingSession.status == SessionStatus.SCHEDULED,
         TrainingSession.starts_at > _now(),
     )
     return list(db.scalars(query))
