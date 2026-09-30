@@ -31,7 +31,7 @@ Do these in order, signing in to each site with GitHub.
 ### 2. Render (backend)
 
 1. New, Web Service, pick this repository.
-2. Name: `sports-academy-api`. The name decides the URL (`https://sports-academy-api.onrender.com`). If Render adds something to it because the name is taken, change the Render URL in `frontend/vercel.json` to match.
+2. Name: `sports-academy-api`. Render builds the URL from the name and adds a few characters if it's taken (the live demo's is `https://sports-academy-api-0tfi.onrender.com`). The URL in `frontend/vercel.json` has to match it.
 3. Language: Docker. Root directory: `backend`. Branch: `main`. Instance type: Free.
 4. Environment variables:
    - `APP_ENV` = `production`
