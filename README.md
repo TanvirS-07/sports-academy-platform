@@ -6,7 +6,7 @@ The idea comes from helping run a cricket coaching academy. A lot of the work th
 
 ## Live demo
 
-Try it at [sports-academy-platform-eosin.vercel.app](https://sports-academy-platform-eosin.vercel.app). Everything in it is made-up data.
+Try it at [precisioncricket.vercel.app](https://precisioncricket.vercel.app). Everything in it is made-up data.
 
 | Role | Email | Password |
 |---|---|---|
