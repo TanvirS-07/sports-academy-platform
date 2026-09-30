@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://sports-academy-api.onrender.com/api/:path*"
+      "destination": "https://sports-academy-api-0tfi.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
