@@ -4,6 +4,17 @@ A web app for running a sports academy: training programs, sessions, bookings, a
 
 The idea comes from helping run a cricket coaching academy. A lot of the work there, like tracking who is booked into which session, taking attendance and keeping notes on players, is done by hand. This project is my attempt to put all of that in one place.
 
+## Live demo
+
+Try it at [sports-academy-platform-eosin.vercel.app](https://sports-academy-platform-eosin.vercel.app). Everything in it is made-up data.
+
+| Role | Email | Password |
+|---|---|---|
+| Coach | coach@example.com | demo-password |
+| Parent | parent@example.com | demo-password |
+
+It runs on free hosting, so if nobody has used it for a while the first login can take up to a minute while the server wakes up. Anyone can change the demo data, and I reset it every now and then.
+
 ## Screenshots
 
 These are from the current version of the app, branded as Precision Cricket Academy. The people and sessions are made-up test data.
@@ -36,7 +47,7 @@ More screenshots from each phase are in [docs/screenshots](docs/screenshots/).
 
 **Phases 1 to 5 (Foundation, Authentication, Core management, Sessions and bookings, and Attendance and development) are done. That's everything in the MVP. Phase 5b gave the frontend a proper design for Precision Cricket Academy.**
 
-Phase 7 is a free live demo with made-up data, on Vercel, Render and Neon. How it's set up is in [docs/deployment.md](docs/deployment.md). A proper production deployment and Phase 6 (Payments) are future improvements. They aren't planned as of right now.
+Phase 7 is a free [live demo](#live-demo) with made-up data, on Vercel, Render and Neon. How it's set up is in [docs/deployment.md](docs/deployment.md). A proper production deployment and Phase 6 (Payments) are future improvements. They aren't planned as of right now.
 
 What exists right now:
 
