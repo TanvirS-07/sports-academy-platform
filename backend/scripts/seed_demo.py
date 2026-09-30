@@ -56,6 +56,11 @@ PARENTS = (
     ("parent@example.com", "Alex", "Morgan"),
     ("parent.jordan@example.com", "Jordan", "Lee"),
     ("parent.chris@example.com", "Chris", "Walsh"),
+    ("parent.sarah@example.com", "Sarah", "Khan"),
+    ("parent.ben@example.com", "Ben", "Roberts"),
+    ("parent.mei@example.com", "Mei", "Chen"),
+    ("parent.daniel@example.com", "Daniel", "Okafor"),
+    ("parent.emma@example.com", "Emma", "Fischer"),
 )
 # (parent index, first name, last name, age in years)
 PLAYERS = (
@@ -65,6 +70,18 @@ PLAYERS = (
     (1, "Ava", "Lee", 14),
     (2, "Liam", "Walsh", 11),
     (2, "Zoe", "Walsh", 13),
+    (3, "Arjun", "Khan", 10),
+    (3, "Leila", "Khan", 13),
+    (4, "Oliver", "Roberts", 11),
+    (4, "Harry", "Roberts", 14),
+    (5, "Lucas", "Chen", 12),
+    (5, "Chloe", "Chen", 10),
+    (6, "Samuel", "Okafor", 13),
+    (6, "Grace", "Okafor", 11),
+    (7, "Jack", "Fischer", 10),
+    (7, "Ruby", "Fischer", 14),
+    (7, "Max", "Fischer", 12),
+    (1, "Isaac", "Lee", 10),
 )
 
 
@@ -76,6 +93,7 @@ class DemoProgram:
     description: str
     objectives: str
     players: tuple[int, ...]
+    capacity: int
     weekday: int  # Monday is 0
     start: time
     location: str
@@ -88,7 +106,8 @@ PROGRAMS = (
         age_group="Under 12",
         description="Batting basics for younger players, in the nets and on the field.",
         objectives="Solid grip and stance, playing straight, calling and running between wickets.",
-        players=(0, 2, 4),
+        players=(0, 4, 6, 8, 11, 13, 14, 17),
+        capacity=10,
         weekday=1,
         start=time(16, 30),
         location="Nets 1 and 2",
@@ -99,7 +118,8 @@ PROGRAMS = (
         age_group="Under 15",
         description="Run-up, action and accuracy for players who want to bowl quick.",
         objectives="A repeatable run-up, a safe action and hitting a good length.",
-        players=(1, 3, 5),
+        players=(1, 2, 3, 5, 7, 9, 10, 12, 15, 16),
+        capacity=12,
         weekday=3,
         start=time(16, 30),
         location="Main oval",
@@ -110,7 +130,9 @@ PROGRAMS = (
         age_group="Under 14",
         description="Catching, ground fielding and throwing, with some fitness work.",
         objectives="Safe hands, a quick pick-up and throw, and better running.",
-        players=(0, 1, 2, 3, 4, 5),
+        # One more player than places, so the next session can be shown as full.
+        players=(0, 1, 2, 4, 5, 6, 7, 8, 10, 12, 13, 14, 16),
+        capacity=12,
         weekday=5,
         start=time(9, 0),
         location="Main oval",
@@ -120,12 +142,15 @@ PROGRAMS = (
 WEEKS_BEFORE = 2
 WEEKS_AFTER = 4
 SESSION_LENGTH = timedelta(minutes=90)
-CAPACITY = 12
+NOTES_PER_PROGRAM = 4
 
 NOTES = (
     ("Front foot drive", "Keeping the head still", "Much more balanced than last month."),
     ("Line and length", "Follow-through", "Hitting a good length more often."),
     ("Catching high balls", "Calling early", "Took every catch in the drill today."),
+    ("Running between wickets", "Backing up at the non-striker's end", "Calling is clearer."),
+    ("Bowling a yorker", "Keeping the front arm up", "Getting it right about half the time."),
+    ("Ground fielding", "Getting low earlier", "Quick pick-up and a good flat throw."),
 )
 
 
@@ -167,8 +192,9 @@ def seed(db: Session, now: datetime) -> None:
     db.add_all(coaches + parents)
 
     players = []
-    for _parent, first, last, age in PLAYERS:
-        born = today.replace(year=today.year - age, day=1) - timedelta(days=40 * len(players))
+    for i, (_parent, first, last, age) in enumerate(PLAYERS):
+        # Spread birthdays over the year, while keeping each player the given age today.
+        born = date(today.year - age - 1, today.month, 1) + timedelta(days=31 + 19 * i)
         player = Player(first_name=first, last_name=last, date_of_birth=born)
         players.append(player)
         db.add(player)
@@ -192,13 +218,14 @@ def seed(db: Session, now: datetime) -> None:
         for player in enrolled:
             db.add(ProgramPlayer(program_id=program.id, player_id=player.id))
 
+        made_full = False
         for week, starts_at in enumerate(_session_times(spec, today)):
             session = TrainingSession(
                 program_id=program.id,
                 starts_at=starts_at,
                 ends_at=starts_at + SESSION_LENGTH,
                 location=spec.location,
-                capacity=CAPACITY,
+                capacity=spec.capacity,
             )
             # One upcoming session is cancelled, so that state shows up too.
             if index == 1 and week == WEEKS_BEFORE + 2:
@@ -208,8 +235,15 @@ def seed(db: Session, now: datetime) -> None:
             if session.status == SessionStatus.CANCELLED:
                 continue
 
-            # Leave one player unbooked each week, so parents have something to book.
-            booked = [p for i, p in enumerate(enrolled) if (i + week) % len(enrolled) != 0]
+            if len(enrolled) > spec.capacity and starts_at > now and not made_full:
+                # The next session is full: everyone is booked except the first player
+                # (a child of parent@example.com), who can't get a place.
+                booked = enrolled[1:]
+                made_full = True
+            else:
+                # Leave about a quarter unbooked each week, so parents have something to book.
+                booked = [p for i, p in enumerate(enrolled) if (i + week) % 4 != 0]
+            booked = booked[: spec.capacity]
             for player in booked:
                 parent = parents[PLAYERS[players.index(player)][0]]
                 db.add(Booking(session_id=session.id, player_id=player.id, booked_by=parent.id))
@@ -230,8 +264,8 @@ def seed(db: Session, now: datetime) -> None:
                         )
                     )
 
-        skills, improvements, progress = NOTES[index]
-        for i, player in enumerate(enrolled[:2]):
+        for i, player in enumerate(enrolled[:NOTES_PER_PROGRAM]):
+            skills, improvements, progress = NOTES[(index + i) % len(NOTES)]
             db.add(
                 DevelopmentNote(
                     player_id=player.id,

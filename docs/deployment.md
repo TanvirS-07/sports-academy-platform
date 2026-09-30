@@ -50,7 +50,7 @@ Once the Render deploy is live, fill the database from your own machine. This us
 docker compose run --rm --no-deps -e DATABASE_URL="<neon url>" backend python -m scripts.seed_demo
 ```
 
-It makes 2 coaches, 3 parents, 6 players and 3 programs, with weekly sessions from two weeks ago to four weeks ahead, bookings, attendance and a few development notes. Everyone is made up and every email is on `example.com`. All the accounts use the password `demo-password`, for example `coach@example.com` and `parent@example.com`.
+It makes 2 coaches, 8 parents, 18 players and 3 programs, with weekly sessions from two weeks ago to four weeks ahead, bookings, attendance and some development notes. The next Fielding and Fitness session is full, so that state shows up too. Everyone is made up and every email is on `example.com`. All the accounts use the password `demo-password`, for example `coach@example.com` and `parent@example.com`.
 
 It won't run if the database already has users. To start again, for example after someone changes the demo passwords or when the sessions have all gone into the past:
 
