@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from app.attendance.models import Attendance
 from app.bookings.models import Booking
 from app.core.security import verify_password
+from app.players.models import Player
+from app.programs.models import Program
 from app.sessions.models import SessionStatus, TrainingSession
 from app.users.models import Role, User
 from app.users.service import get_user_by_email
@@ -102,3 +104,32 @@ def test_reset_replaces_existing_data(run, db_session: Session) -> None:
     users = _count(db_session, User)
     assert run(["--reset"]) == 0
     assert _count(db_session, User) == users
+
+
+def test_the_next_fielding_session_is_full(run, db_session: Session) -> None:
+    run([])
+
+    upcoming = db_session.scalars(
+        select(TrainingSession)
+        .join(Program)
+        .where(Program.name == "Fielding and Fitness", TrainingSession.starts_at > NOW)
+        .order_by(TrainingSession.starts_at)
+    ).all()
+    assert upcoming[0].booked_count == upcoming[0].capacity
+    assert all(s.booked_count < s.capacity for s in upcoming[1:])
+
+
+@pytest.mark.parametrize(
+    "now", [NOW, datetime(2027, 1, 1, 0, 0, tzinfo=UTC), datetime(2027, 3, 31, 0, 0, tzinfo=UTC)]
+)
+def test_players_are_the_listed_age(db_session: Session, now: datetime) -> None:
+    seed_demo.seed(db_session, now)
+
+    today = now.astimezone(seed_demo.SYDNEY).date()
+    ages = {
+        (p.first_name, p.last_name): today.year
+        - p.date_of_birth.year
+        - ((today.month, today.day) < (p.date_of_birth.month, p.date_of_birth.day))
+        for p in db_session.scalars(select(Player))
+    }
+    assert ages == {(first, last): age for _, first, last, age in seed_demo.PLAYERS}
