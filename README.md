@@ -36,7 +36,7 @@ More screenshots from each phase are in [docs/screenshots](docs/screenshots/).
 
 **Phases 1 to 5 (Foundation, Authentication, Core management, Sessions and bookings, and Attendance and development) are done. That's everything in the MVP. Phase 5b gave the frontend a proper design for Precision Cricket Academy.**
 
-Phase 6 (Payments) and Phase 7 (Deployment) are future improvements. They aren't planned as of right now.
+Phase 7 is a free live demo with made-up data, on Vercel, Render and Neon. How it's set up is in [docs/deployment.md](docs/deployment.md). A proper production deployment and Phase 6 (Payments) are future improvements. They aren't planned as of right now.
 
 What exists right now:
 
@@ -81,7 +81,7 @@ Everything else in this README describes planned features. The development phase
 | Testing | pytest, Vitest, Playwright |
 | Local environment | Docker Compose |
 | CI | GitHub Actions |
-| Deployment | Not planned right now. Phase 7 would cover it as a future improvement. |
+| Deployment | Free live demo on Vercel (frontend), Render (backend) and Neon (database). See [docs/deployment.md](docs/deployment.md). |
 
 ### Pinned versions
 
