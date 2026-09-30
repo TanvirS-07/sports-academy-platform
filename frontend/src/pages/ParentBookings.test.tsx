@@ -140,4 +140,31 @@ describe('parent booking pages', () => {
 
     expect(await screen.findByText('Session cancelled')).toBeInTheDocument()
   })
+  it('shows a session once when it was booked and cancelled more than once', async () => {
+    mockBackend({
+      ...loggedInAs(parentUser),
+      'GET /api/v1/players/p1': () => jsonResponse({ ...sam, programs: [program] }),
+      ...noProgressYet,
+      'GET /api/v1/bookings?player_id=p1': () =>
+        jsonResponse([{ ...booking('CANCELLED'), id: 'b1' }, { ...booking('CANCELLED'), id: 'b2' }]),
+    })
+
+    renderAt('/parent/players/p1', routes)
+
+    expect(await screen.findByText('Cancelled')).toBeInTheDocument()
+    expect(screen.getAllByText('Cancelled')).toHaveLength(1)
+  })
+
+  it('shows a cancelled session without a book button', async () => {
+    mockBackend({
+      ...familyHandlers(),
+      'GET /api/v1/sessions': () => jsonResponse([{ ...session, status: 'CANCELLED', booked: 0, available: 10 }]),
+      'GET /api/v1/bookings': () => jsonResponse([]),
+    })
+
+    renderAt('/parent/sessions', routes)
+
+    expect(await screen.findByText('Cancelled')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Book Sam' })).not.toBeInTheDocument()
+  })
 })

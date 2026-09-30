@@ -19,10 +19,16 @@ import { PlayerForm } from '../features/players/PlayerForm'
 import { formatDate } from '../lib/dates'
 import { formatDay } from '../lib/sydneyTime'
 
-/** Hides an old cancelled booking when the child has booked the same session again. */
-function withoutRebooked(bookings: Booking[]): Booking[] {
-  const confirmed = new Set(bookings.filter((b) => b.status === 'CONFIRMED').map((b) => b.session.id))
-  return bookings.filter((b) => b.status === 'CONFIRMED' || !confirmed.has(b.session.id))
+/**
+ * One row per session: the confirmed booking if there is one, otherwise the latest
+ * cancelled one. Bookings come ordered by session, then oldest first.
+ */
+function onePerSession(bookings: Booking[]): Booking[] {
+  const kept = new Map<string, Booking>()
+  for (const booking of bookings) {
+    if (kept.get(booking.session.id)?.status !== 'CONFIRMED') kept.set(booking.session.id, booking)
+  }
+  return [...kept.values()]
 }
 
 export function PlayerPage() {
@@ -36,7 +42,7 @@ export function PlayerPage() {
   const toast = useToast()
   const [editing, setEditing] = useState(false)
 
-  const shown = withoutRebooked(bookings.data ?? [])
+  const shown = onePerSession(bookings.data ?? [])
   const confirmedCount = shown.filter((booking) => booking.status === 'CONFIRMED').length
 
   return (
