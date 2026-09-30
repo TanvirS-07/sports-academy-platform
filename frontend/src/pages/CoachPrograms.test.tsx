@@ -48,6 +48,43 @@ describe('coach program pages', () => {
     expect(await screen.findByText('No sessions scheduled yet.')).toBeInTheDocument()
   })
 
+  it('adds up the next 7 days and shows only the first 4 sessions', async () => {
+    const inDays = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+    const session = (id: string, days: number, booked: number, capacity: number, status = 'SCHEDULED') => ({
+      id,
+      program: { id: 'g1', name: 'U14 Cricket Development', coach_name: 'Sam Lee' },
+      starts_at: inDays(days),
+      ends_at: inDays(days + 0.05),
+      location: 'Main oval',
+      capacity,
+      booked,
+      available: capacity - booked,
+      status,
+    })
+    mockBackend({
+      ...loggedInAs(coachUser),
+      'GET /api/v1/programs': () => jsonResponse([program]),
+      'GET /api/v1/sessions': () =>
+        jsonResponse([
+          session('a', 1, 8, 12),
+          session('b', 3, 10, 10),
+          session('c', 5, 0, 10, 'CANCELLED'),
+          session('d', 10, 4, 12),
+          session('e', 12, 2, 12),
+        ]),
+    })
+
+    renderAt('/coach', routes)
+
+    const week = await screen.findByRole('region', { name: 'Next 7 days' })
+    expect(within(week).getByText('Sessions').nextSibling).toHaveTextContent('2')
+    expect(within(week).getByText('Booked').nextSibling).toHaveTextContent('18')
+    expect(within(week).getByText('Places left · 1 full').nextSibling).toHaveTextContent('4')
+    const comingUp = screen.getByRole('region', { name: 'Coming up' })
+    expect(within(comingUp).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(comingUp).getByRole('link', { name: 'See calendar' })).toHaveAttribute('href', '/calendar')
+  })
+
   it('creates a program with the only sport picked for them', async () => {
     const fetchMock = mockBackend({
       ...loggedInAs(coachUser),
