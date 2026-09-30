@@ -282,7 +282,7 @@ Tests use real PostgreSQL instead of SQLite, because later features depend on ro
 * CORS is off by default, because Vite forwards API requests in development. When it's enabled, only the listed origins are allowed.
 * Dependabot opens pull requests for dependency updates.
 * Passwords are hashed with Argon2, and a wrong password and an unknown email get the same "invalid email or password" message.
-* Failed logins are limited per email (5 a minute) and per IP address (20 a minute, higher because a family or school can share one address). Behind a reverse proxy, uvicorn will need `--forwarded-allow-ips` for the IP limit to see real addresses. That gets set up with hosting.
+* Failed logins are limited per email (5 a minute) and per IP address (20 a minute, higher because a family or school can share one address). On the live demo, uvicorn trusts `X-Forwarded-For` from any proxy (the hosts' IP addresses aren't known), so the IP limit sees real addresses but can be fooled by a faked header. The email limit still works.
 * `APP_ENV` must be set, so a missing setting can't quietly run production in development mode. In production the app refuses to start with one of the example JWT secrets from this repo.
 * Docker Compose only exposes the database, backend and frontend ports on `127.0.0.1`, so other computers on the same network can't connect.
 
@@ -312,16 +312,17 @@ The source folders are mounted into the containers, so code changes reload autom
 
 Work is done on branches and merged into `main` through pull requests. A branch ruleset on `main` requires all three checks to pass.
 
-## 14. Deployment (not decided yet)
+## 14. Deployment (live demo)
 
-Deployment is planned for Phase 7, and the hosting provider hasn't been chosen. What is already known:
+**Implemented (Phase 7):** a free live demo with made-up data. The full setup is in [deployment.md](deployment.md).
 
-* Infrastructure will be defined with Terraform.
-* The frontend builds to static files (`npm run build`).
-* The backend has a `prod` Docker image that runs as a non-root user.
-* Deployment will run from GitHub Actions after CI passes.
+* **Frontend:** Vercel builds `frontend/` and serves the static files. `frontend/vercel.json` forwards `/api/*` to the backend, so the browser sees one site and the refresh cookie and CORS settings don't change.
+* **Backend:** Render runs the `prod` Docker image. `scripts/start.sh` runs the migrations and then uvicorn with `--forwarded-allow-ips "*"`.
+* **Database:** Neon, Postgres 17.
+* **Demo data:** `scripts/seed_demo.py`, run by hand. `--reset` clears it and starts again.
+* Both hosts deploy from `main` when it changes. The settings are in each host's dashboard, not in Terraform, because a free demo doesn't need it.
 
-The provider, hosting setup, secrets storage and costs will be decided in Phase 7.
+A real production deployment (Terraform, monitoring, backups) is still a future improvement.
 
 ## 15. Phases
 
@@ -335,4 +336,4 @@ The provider, hosting setup, secrets storage and costs will be decided in Phase 
 | **5. Attendance and development** (done) | Attendance, development notes | All MVP Playwright flows pass |
 | **5b. Design refresh** (done) | Branding, shared components, calendar | Every page uses the shared components and the Playwright flows still pass |
 | **6. Payments** | Invoices, payment status | Parents can see invoices |
-| **7. Deployment** | Choose a provider, Terraform, deployment pipeline, monitoring | The app deploys from `main` |
+| **7. Deployment** (live demo done) | Free live demo on Vercel, Render and Neon, demo data. Terraform and monitoring are future work | The app deploys from `main` |

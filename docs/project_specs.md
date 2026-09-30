@@ -222,7 +222,7 @@ So far, Phases 1 to 5 cover health checks and database tests, registration, logi
 * **Backend:** Python, FastAPI, JWT authentication, pytest
 * **Database:** PostgreSQL
 * **Development:** Docker, Docker Compose, Git, GitHub, GitHub Actions
-* **Deployment (Phase 7):** Terraform. The hosting provider will be chosen in Phase 7.
+* **Deployment (Phase 7):** a free live demo on Vercel, Render and Neon (see [deployment.md](deployment.md)). Terraform is left for a real production deployment.
 
 ## 11. Architecture
 
@@ -250,7 +250,7 @@ The backend handles authentication and authorisation. The frontend only talks to
 | **5. Attendance and development** (done) | Attendance records, development notes, player progress |
 | **5b. Design refresh** (done) | Academy branding, shared UI components, calendar of upcoming sessions |
 | **6. Payments** | Invoices, payment status, payment history |
-| **7. Deployment** | Production configuration, choosing a hosting provider, Terraform, deployment pipeline, monitoring and logging |
+| **7. Deployment** (live demo done) | Free live demo with made-up data. Production configuration, Terraform, monitoring and logging are future work |
 
 ## 13. Other sports
 
