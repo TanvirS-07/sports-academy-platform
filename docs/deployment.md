@@ -1,6 +1,6 @@
 # Deployment (live demo)
 
-The live demo is at https://sports-academy-platform-eosin.vercel.app. It runs on free tiers, with made-up data only. Payments aren't part of it.
+The live demo is at https://precisioncricket.vercel.app. It runs on free tiers, with made-up data only. Payments aren't part of it.
 
 | Part | Host | Free tier (checked 2026-09-30) |
 |---|---|---|
