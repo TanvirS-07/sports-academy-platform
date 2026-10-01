@@ -75,7 +75,7 @@ export function AttendanceForm({ rows, onSave }: Props) {
                 <div className="grid grid-cols-3 overflow-hidden rounded-md border border-control sm:inline-grid">
                   {statuses.map((status) => (
                     <label key={status}
-                      className={`flex h-10 cursor-pointer items-center justify-center border-l border-control px-4 text-sm font-medium transition-colors first:border-l-0 hover:bg-subtle has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-brand ${selectedClasses[status]}`}>
+                      className={`flex h-10 cursor-pointer items-center justify-center border-l border-control px-4 text-sm font-medium transition-colors first:border-l-0 hover:bg-subtle has-[:checked]:animate-pop has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-brand ${selectedClasses[status]}`}>
                       <input type="radio" name={`attendance-${player.id}`} value={status} className="sr-only"
                         checked={marks[player.id] === status} onChange={() => mark(player.id, status)} />
                       {attendanceLabels[status]}

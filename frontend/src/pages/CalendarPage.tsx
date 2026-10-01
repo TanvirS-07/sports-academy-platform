@@ -84,6 +84,16 @@ export function CalendarPage() {
   const sessions = useSessions()
   const bookings = useBookings(undefined, { enabled: isParent })
   const [shown, setShown] = useState(currentMonth)
+  // Which way the month grid slides when you change month.
+  const [slide, setSlide] = useState<'next' | 'prev' | null>(null)
+  function goTo(month: Month) {
+    const diff = (month.year - shown.year) * 12 + (month.month - shown.month)
+    if (diff === 0) return
+    setSlide(diff > 0 ? 'next' : 'prev')
+    setShown(month)
+  }
+  const slideClass = slide === 'next' ? 'animate-month-next' : slide === 'prev' ? 'animate-month-prev' : ''
+  const monthKey = `${shown.year}-${shown.month}`
 
   const today = toSydney(new Date()).date
   const days = visibleDays(shown, today)
@@ -135,14 +145,14 @@ export function CalendarPage() {
         }
         actions={
           <>
-            <Button variant="secondary" onClick={() => setShown(currentMonth())}>Today</Button>
+            <Button variant="secondary" onClick={() => goTo(currentMonth())}>Today</Button>
             <div className="flex">
               <Button variant="secondary" className="rounded-r-none px-3" aria-label="Previous month"
-                onClick={() => setShown(shiftMonth(shown, -1))}>
+                onClick={() => goTo(shiftMonth(shown, -1))}>
                 <Chevron direction="left" />
               </Button>
               <Button variant="secondary" className="-ml-px rounded-l-none px-3" aria-label="Next month"
-                onClick={() => setShown(shiftMonth(shown, 1))}>
+                onClick={() => goTo(shiftMonth(shown, 1))}>
                 <Chevron direction="right" />
               </Button>
             </div>
@@ -170,7 +180,7 @@ export function CalendarPage() {
       )}
 
       {/* Month grid on tablets and up. */}
-      <div className="hidden overflow-hidden rounded-lg border border-line bg-surface md:block">
+      <div key={monthKey} className={`hidden overflow-hidden rounded-lg border border-line bg-surface md:block ${slideClass}`}>
         <div className="grid grid-cols-7 border-b border-line bg-subtle/60">
           {WEEKDAYS.map((day) => (
             <div key={day} className="px-2 py-2 text-xs font-semibold tracking-wide text-ink-muted uppercase">
@@ -223,7 +233,7 @@ export function CalendarPage() {
       </div>
 
       {/* A list by day on phones, where seven columns don't fit. */}
-      <div className="space-y-4 md:hidden">
+      <div key={`list-${monthKey}`} className={`space-y-4 md:hidden ${slideClass}`}>
         {sessions.data && monthDays.length === 0 && (
           <Panel>
             <EmptyState>No upcoming sessions this month.</EmptyState>
