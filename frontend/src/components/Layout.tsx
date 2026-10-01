@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 
+import { lift } from './Button'
+
 import logoMark from '../assets/logo-mark.svg'
 import { homePathFor, type User } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
@@ -87,7 +89,7 @@ function Header() {
               <>
                 <Link
                   to="/account"
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-white/90 hover:bg-white/10 hover:text-white"
+                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-white/90 hover:bg-white/10 hover:text-white ${lift}`}
                 >
                   <span
                     aria-hidden="true"
@@ -104,17 +106,17 @@ function Header() {
                     void logout()
                     navigate('/', { replace: true })
                   }}
-                  className="rounded-md px-2 py-1.5 whitespace-nowrap text-white/70 hover:bg-white/10 hover:text-white"
+                  className={`rounded-md px-2 py-1.5 whitespace-nowrap text-white/70 hover:bg-white/10 hover:text-white ${lift}`}
                 >
                   Log out
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="rounded-md px-3 py-1.5 text-white/85 hover:bg-white/10 hover:text-white">
+                <Link to="/login" className={`rounded-md px-3 py-1.5 text-white/85 hover:bg-white/10 hover:text-white ${lift}`}>
                   Log in
                 </Link>
-                <Link to="/register" className="rounded-md bg-white px-3 py-1.5 font-semibold text-brand hover:bg-white/90">
+                <Link to="/register" className={`rounded-md bg-white px-3 py-1.5 font-semibold text-brand hover:bg-white/90 ${lift}`}>
                   Register
                 </Link>
               </>

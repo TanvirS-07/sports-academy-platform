@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 
 import { homePathFor } from '../auth/types'
+import { lift } from '../components/Button'
 import { useAuth } from '../auth/useAuth'
 import { AuthLayout } from '../components/AuthLayout'
 import { FormError, FormField, SubmitButton } from '../components/FormField'
@@ -94,7 +95,7 @@ function DemoLogins({ onPick }: { onPick: (email: string) => void }) {
             key={account.email}
             type="button"
             onClick={() => onPick(account.email)}
-            className="rounded-md border border-line-strong bg-surface px-3 py-1.5 font-medium text-ink hover:border-ink-muted"
+            className={`rounded-md border border-line-strong bg-surface px-3 py-1.5 font-medium text-ink hover:border-ink-muted ${lift}`}
           >
             {account.label}: {account.email}
           </button>
