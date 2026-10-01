@@ -8,11 +8,20 @@ export function QueryState({ isPending, error }: { isPending: boolean; error: un
   return null
 }
 
-export function Loading({ label = 'Loading…' }: { label?: string }) {
+/** Placeholder rows shaped like a list, with a shimmer, while data loads. */
+export function Loading({ label = 'Loading…', rows = 3 }: { label?: string; rows?: number }) {
   return (
-    <p role="status" className="flex items-center gap-2 px-4 py-6 text-sm text-ink-muted sm:px-5">
-      <span className="size-1.5 animate-pulse rounded-full bg-ink-faint" aria-hidden="true" />
-      {label}
-    </p>
+    <div role="status" className="divide-y divide-line">
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} aria-hidden="true" className="flex items-center gap-4 px-4 py-4 sm:px-5">
+          <div className="skeleton size-10 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="skeleton h-3.5 w-1/3" />
+            <div className="skeleton h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }

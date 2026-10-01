@@ -19,7 +19,7 @@ function DateBlock({ iso, muted = false }: { iso: string; muted?: boolean }) {
 }
 
 const chevron = (
-  <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-ink-faint" fill="currentColor" aria-hidden="true">
+  <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-ink-muted" fill="currentColor" aria-hidden="true">
     <path d="M7.2 14.8a.75.75 0 0 1 0-1.06L10.94 10 7.2 6.26a.75.75 0 1 1 1.06-1.06l4.27 4.27a.75.75 0 0 1 0 1.06l-4.27 4.27a.75.75 0 0 1-1.06 0Z" />
   </svg>
 )
@@ -71,7 +71,7 @@ export function SessionRow({
   if (to) {
     return (
       <li className="@container">
-        <Link to={to} className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-subtle/70 sm:gap-4 sm:px-5">
+        <Link to={to} className="group flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-subtle/70 sm:gap-4 sm:px-5">
           <div className={grid}>{body}</div>
           {chevron}
         </Link>
@@ -93,7 +93,7 @@ const grid = 'grid flex-1 grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 @md:
 export function LinkRow({ to, title, detail, aside }: { to: string; title: ReactNode; detail?: ReactNode; aside?: ReactNode }) {
   return (
     <li>
-      <Link to={to} className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-subtle/70 sm:px-5">
+      <Link to={to} className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-subtle/70 sm:px-5">
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-semibold">{title}</p>
           {detail && <div className="mt-0.5 text-sm text-ink-muted">{detail}</div>}

@@ -10,20 +10,35 @@ export function useToast() {
 }
 
 const DISMISS_AFTER_MS = 6000
+const LEAVE_MS = 180
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<Toast | null>(null)
+  const [leaving, setLeaving] = useState(false)
   const nextId = useRef(1)
 
   const show = useCallback((message: string, action?: Toast['action']) => {
+    setLeaving(false)
     setToast({ id: nextId.current++, message, action })
   }, [])
 
+  // Fades the toast out, then removes it.
+  const dismiss = useCallback(() => setLeaving(true), [])
+
   useEffect(() => {
     if (!toast) return
-    const timer = setTimeout(() => setToast(null), DISMISS_AFTER_MS)
+    const timer = setTimeout(dismiss, DISMISS_AFTER_MS)
     return () => clearTimeout(timer)
-  }, [toast])
+  }, [toast, dismiss])
+
+  useEffect(() => {
+    if (!leaving) return
+    const timer = setTimeout(() => {
+      setToast(null)
+      setLeaving(false)
+    }, LEAVE_MS)
+    return () => clearTimeout(timer)
+  }, [leaving])
 
   return (
     <ToastContext.Provider value={show}>
@@ -36,7 +51,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toast && (
           <div
             key={toast.id}
-            className="pointer-events-auto flex max-w-md items-center gap-4 rounded-md bg-ink px-4 py-3 text-sm text-white shadow-lg shadow-ink/20"
+            className={`pointer-events-auto flex max-w-md items-center gap-4 rounded-md bg-ink px-4 py-3 text-sm text-white shadow-lg shadow-ink/20 ${leaving ? 'animate-toast-out' : 'animate-toast-in'}`}
           >
             <span>{toast.message}</span>
             {toast.action && (
@@ -44,7 +59,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => {
                   toast.action?.onClick()
-                  setToast(null)
+                  dismiss()
                 }}
                 className="font-semibold text-accent hover:underline"
               >
@@ -54,7 +69,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <button
               type="button"
               aria-label="Dismiss"
-              onClick={() => setToast(null)}
+              onClick={dismiss}
               className="-mr-1 ml-auto rounded p-1 text-white/60 hover:text-white"
             >
               <svg viewBox="0 0 20 20" className="size-4" fill="currentColor" aria-hidden="true">
