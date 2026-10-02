@@ -10,9 +10,9 @@ dependencies = [
     "psycopg[binary]==3.3.6",
     "pwdlib[argon2]==0.3.1",
     "pydantic-settings==2.15.0",
-    "pyjwt==2.15.0",
-    "sqlalchemy==2.1.0",
-    "uvicorn[standard]==0.53.0",
+    "pyjwt==2.15.1",
+    "sqlalchemy==2.1.1",
+    "uvicorn[standard]==0.54.0",
 ]
 
 [tool.uv]
