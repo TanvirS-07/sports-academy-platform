@@ -65,6 +65,34 @@ jobs:
       - name: Run tests
         run: uv run pytest --cov --cov-report=term-missing
 
+  mcp-server:
+    name: MCP server (lint + tests)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mcp_server
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.19"
+          enable-cache: true
+          cache-dependency-glob: mcp_server/uv.lock
+
+      - name: Install Python and dependencies (from uv.lock)
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Run tests
+        run: uv run pytest
+
   frontend:
     name: Frontend (lint + typecheck + tests + build)
     runs-on: ubuntu-24.04
