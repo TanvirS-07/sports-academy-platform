@@ -1,0 +1,30 @@
+[project]
+name = "sports-academy-mcp"
+version = "0.1.0"
+description = "MCP server that lets an AI assistant use the academy API as a coach"
+requires-python = "==3.12.*"
+dependencies = [
+    "mcp[cli]==2.2.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: import sorting, B: bugbear, UP: pyupgrade
+select = ["E", "W", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.16.9",
+]
