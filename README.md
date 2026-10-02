@@ -49,6 +49,8 @@ More screenshots from each phase are in [docs/screenshots](docs/screenshots/).
 
 Phase 7 is a free [live demo](#live-demo) with made-up data, on Vercel, Render and Neon. How it's set up is in [docs/deployment.md](docs/deployment.md). A proper production deployment and Phase 6 (Payments) are future improvements. They aren't planned as of right now.
 
+Phase 8 adds an MCP server in [mcp_server/](mcp_server/README.md), so an AI assistant can look up a coach's programs, sessions and free spots and add a session through the API. It only runs against the local stack.
+
 What exists right now:
 
 * A FastAPI backend with health checks, parent registration, login and a `/users/me` endpoint
@@ -65,6 +67,7 @@ What exists right now:
 * PostgreSQL running in Docker, with tables for users, refresh tokens, players, sports (Cricket for now), programs, enrolments, training sessions, bookings, attendance and development notes, managed by Alembic
 * Backend, frontend and end-to-end tests
 * A GitHub Actions CI pipeline
+* An MCP server with four tools (list programs, list sessions, check availability, create a session) for the local stack
 
 You stay logged in for 7 days, even after refreshing the page or closing the browser. Logging out ends the login on the server as well as in the browser.
 
@@ -232,6 +235,7 @@ npm run test:e2e
 .
 ├── backend/                 FastAPI app, Alembic migrations, pytest tests
 ├── frontend/                React app, Vitest tests, Playwright tests (e2e/)
+├── mcp_server/              MCP server that wraps the API, with its own tests
 ├── docker/postgres/init/    Creates the academy_test database
 ├── docs/                    Specification, architecture notes and decision records
 ├── .github/                 CI workflow and Dependabot config
