@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "MCP server that lets an AI assistant use the academy API as a coach"
 requires-python = "==3.12.*"
 dependencies = [
-    "mcp[cli]==2.2.0",
+    "mcp[cli]==2.3.0",
 ]
 
 [tool.uv]
@@ -26,5 +26,5 @@ addopts = "-ra --strict-markers"
 [dependency-groups]
 dev = [
     "pytest==9.1.1",
-    "ruff==0.16.9",
+    "ruff==0.16.10",
 ]
