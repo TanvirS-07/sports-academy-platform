@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- base: pinned Python + pinned uv ----------
-FROM python:3.12.14-slim-bookworm AS base
+FROM python:3.12.15-slim-bookworm AS base
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.19 /uv /uvx /bin/
 
