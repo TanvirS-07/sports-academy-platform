@@ -26,7 +26,10 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(320), unique=True)
-    password_hash: Mapped[str] = mapped_column(String(255))
+    # None for parents who only sign in with Google.
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    # The "sub" claim from Google's ID token, set once the account has signed in with Google.
+    google_sub: Mapped[str | None] = mapped_column(String(255), unique=True)
     role: Mapped[Role] = mapped_column(Enum(Role, name="user_role"))
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))

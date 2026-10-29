@@ -139,6 +139,22 @@ def test_inactive_user_cannot_log_in(client: TestClient, db_session: Session) ->
     assert response.json()["error"]["code"] == "INVALID_CREDENTIALS"
 
 
+def test_google_only_account_cannot_log_in_with_a_password(
+    client: TestClient, db_session: Session
+) -> None:
+    user = make_user(db_session, email="parent@example.com")
+    user.password_hash = None
+    user.google_sub = "google-account-1"
+    db_session.commit()
+
+    response = client.post(
+        LOGIN_URL, json={"email": "parent@example.com", "password": DEFAULT_PASSWORD}
+    )
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "INVALID_CREDENTIALS"
+
+
 def test_coach_can_log_in(client: TestClient, db_session: Session) -> None:
     make_user(db_session, email="coach@example.com", role=Role.COACH)
 
