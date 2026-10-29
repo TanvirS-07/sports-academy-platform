@@ -1,10 +1,18 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.auth import service
-from app.auth.cookies import REFRESH_COOKIE_NAME, clear_refresh_cookie, set_refresh_cookie
+from app.auth import google, service
+from app.auth.cookies import (
+    GOOGLE_LOGIN_COOKIE_NAME,
+    REFRESH_COOKIE_NAME,
+    clear_google_login_cookie,
+    clear_refresh_cookie,
+    set_google_login_cookie,
+    set_refresh_cookie,
+)
 from app.auth.rate_limit import ip_login_rate_limiter, login_rate_limiter
 from app.auth.refresh_tokens import (
     INVALID_REFRESH_TOKEN_MESSAGE,
@@ -12,7 +20,8 @@ from app.auth.refresh_tokens import (
     revoke_refresh_token,
     rotate_refresh_token,
 )
-from app.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
+from app.auth.schemas import LoginOptionsResponse, LoginRequest, RegisterRequest, TokenResponse
+from app.core.config import get_settings
 from app.core.errors import (
     AppError,
     ErrorResponse,
@@ -116,3 +125,89 @@ def logout(
     if refresh_token is not None:
         revoke_refresh_token(db, refresh_token)
     clear_refresh_cookie(response)
+
+
+# --- Sign in with Google (parents only) ---
+
+# Frontend pages the Google routes send the browser to. The frontend and the API are
+# served from one site (Vite's proxy locally, vercel.json on the demo), so these are paths.
+GOOGLE_SUCCESS_PATH = "/parent"
+GOOGLE_FAILURE_PATH = "/login"
+
+
+@router.get(
+    "/options",
+    response_model=LoginOptionsResponse,
+    summary="Which ways of logging in are turned on",
+)
+def login_options() -> LoginOptionsResponse:
+    return LoginOptionsResponse(google=get_settings().google_login_enabled)
+
+
+def _google_failure(reason: str) -> RedirectResponse:
+    response = RedirectResponse(
+        f"{GOOGLE_FAILURE_PATH}?google_error={reason}", status_code=status.HTTP_303_SEE_OTHER
+    )
+    clear_google_login_cookie(response)
+    return response
+
+
+@router.get(
+    "/google/start",
+    response_class=RedirectResponse,
+    status_code=status.HTTP_303_SEE_OTHER,
+    summary="Send the browser to Google to sign in",
+)
+def google_start() -> RedirectResponse:
+    if not get_settings().google_login_enabled:
+        return _google_failure("not_configured")
+
+    attempt = google.new_attempt()
+    response = RedirectResponse(
+        google.authorization_url(attempt), status_code=status.HTTP_303_SEE_OTHER
+    )
+    set_google_login_cookie(
+        response,
+        google.encode_attempt(attempt),
+        max_age=int(google.ATTEMPT_LIFETIME.total_seconds()),
+    )
+    return response
+
+
+@router.get(
+    "/google/callback",
+    response_class=RedirectResponse,
+    status_code=status.HTTP_303_SEE_OTHER,
+    summary="Where Google sends the browser back to. Logs the parent in.",
+)
+def google_callback(
+    db: Annotated[Session, Depends(get_db)],
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    login_cookie: Annotated[str | None, Cookie(alias=GOOGLE_LOGIN_COOKIE_NAME)] = None,
+) -> RedirectResponse:
+    try:
+        if not get_settings().google_login_enabled:
+            raise google.GoogleLoginError("not_configured")
+        if error is not None:
+            # access_denied means the person pressed Cancel on Google's page.
+            raise google.GoogleLoginError("cancelled" if error == "access_denied" else "failed")
+        if login_cookie is None:
+            raise google.GoogleLoginError("expired")
+        if code is None or state is None:
+            raise google.GoogleLoginError("failed")
+
+        attempt = google.decode_attempt(login_cookie)
+        google.check_state(attempt, state)
+        identity = google.fetch_identity(code, attempt)
+        user = service.sign_in_with_google(db, identity)
+    except google.GoogleLoginError as exc:
+        return _google_failure(exc.reason)
+
+    # Same as a password login: the refresh cookie is set here, and the frontend swaps
+    # it for an access token when the page loads.
+    response = RedirectResponse(GOOGLE_SUCCESS_PATH, status_code=status.HTTP_303_SEE_OTHER)
+    clear_google_login_cookie(response)
+    set_refresh_cookie(response, issue_refresh_token(db, user))
+    return response
