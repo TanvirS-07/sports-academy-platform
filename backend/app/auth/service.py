@@ -24,8 +24,9 @@ def register_parent(db: Session, data: RegisterRequest) -> User:
 def authenticate(db: Session, data: LoginRequest) -> User:
     user = get_user_by_email(db, data.email)
 
-    if user is None:
-        # Still run a hash check so unknown emails take as long as wrong passwords.
+    if user is None or user.password_hash is None:
+        # Still run a hash check so unknown emails (and Google-only accounts) take as
+        # long as wrong passwords.
         verify_password(data.password, dummy_password_hash())
         raise UnauthorizedError(INVALID_CREDENTIALS_MESSAGE, code="INVALID_CREDENTIALS")
 
