@@ -56,6 +56,7 @@ What exists right now:
 * A FastAPI backend with health checks, parent registration, login and a `/users/me` endpoint
 * JWT access tokens, refresh tokens in an httpOnly cookie, Argon2 password hashing and role checks (Coach and Parent)
 * A script for creating coach accounts (public sign-up only creates parents)
+* Parents can sign up and log in with Google instead of a password. It's off until a Google client is set up, see [docs/google-login.md](docs/google-login.md)
 * Parents can add their children as players and see which programs they're in
 * Coaches can create programs, search for players by name and enrol them, and make an enrolment inactive or active again
 * Coaches can add training sessions to their programs with a capacity, edit them, cancel them, and see who's booked

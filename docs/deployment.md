@@ -37,6 +37,7 @@ Do these in order, signing in to each site with GitHub.
    - `APP_ENV` = `production`
    - `DATABASE_URL` = the Neon URL from step 1
    - `JWT_SECRET` = a new value from `python -c "import secrets; print(secrets.token_urlsafe(48))"`
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_REDIRECT_URI` (optional) turn on "Continue with Google" for parents. How to get them is in [google-login.md](google-login.md#live-demo-vercel-and-render).
 5. Health check path (under Advanced): `/api/v1/health`.
 6. Create it. The first deploy runs the migrations on the empty Neon database.
 
