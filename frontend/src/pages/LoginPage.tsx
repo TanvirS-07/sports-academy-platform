@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 
+import { googleErrorMessage, GoogleSignIn } from '../auth/GoogleSignIn'
 import { homePathFor } from '../auth/types'
 import { lift } from '../components/Button'
 import { useAuth } from '../auth/useAuth'
@@ -13,10 +14,12 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from
+  // Set when signing in with Google didn't work and the backend sent the browser back here.
+  const [searchParams] = useSearchParams()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(() => googleErrorMessage(searchParams.get('google_error')))
   const [busy, setBusy] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -56,6 +59,7 @@ export function LoginPage() {
         />
         <SubmitButton busy={busy} busyLabel="Logging in…">Log in</SubmitButton>
       </form>
+      <GoogleSignIn note="For parents. Coaches log in with their email and password." />
       {import.meta.env.VITE_DEMO === 'true' && (
         <DemoLogins
           onPick={(demoEmail) => {

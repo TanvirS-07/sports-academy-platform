@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 
+import { GoogleSignIn } from '../auth/GoogleSignIn'
 import { homePathFor } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
 import { AuthLayout } from '../components/AuthLayout'
@@ -58,6 +59,7 @@ export function RegisterPage() {
           value={form.password} onChange={update('password')} />
         <SubmitButton busy={busy} busyLabel="Creating account…">Create account</SubmitButton>
       </form>
+      <GoogleSignIn note="No password needed. We use the name and email from your Google account." />
       <p className="mt-8 border-t border-line pt-6 text-sm text-ink-muted">
         Already have an account?{' '}
         <Link to="/login" className="font-semibold text-brand underline-offset-4 hover:underline">
