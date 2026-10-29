@@ -16,6 +16,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { ParentPage } from './pages/ParentPage'
 import { ParentSessionsPage } from './pages/ParentSessionsPage'
 import { PlayerPage } from './pages/PlayerPage'
+import { PrivacyPage } from './pages/PrivacyPage'
 import { ProgramPage } from './pages/ProgramPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { StatusPage } from './pages/StatusPage'
@@ -28,6 +29,7 @@ export function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="status" element={<StatusPage />} />
+        <Route path="privacy" element={<PrivacyPage />} />
         <Route
           path="coach"
           element={

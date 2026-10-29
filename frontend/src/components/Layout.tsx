@@ -158,6 +158,7 @@ export function Layout() {
           <span>Precision Cricket Academy · Sydney</span>
           <span className="flex flex-wrap gap-x-4">
             <span>All session times are Sydney time</span>
+            <Link to="/privacy" className="underline-offset-4 hover:text-ink hover:underline">Privacy</Link>
             <Link to="/status" className="underline-offset-4 hover:text-ink hover:underline">System status</Link>
           </span>
         </div>
