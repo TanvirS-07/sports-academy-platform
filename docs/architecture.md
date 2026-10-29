@@ -129,7 +129,7 @@ Each feature is split into three parts. The router handles HTTP. The service hol
 
 | Phase | Table | Notes |
 |---|---|---|
-| 2 (done) | `users` | email (stored lowercase, unique), Argon2 password hash, role (COACH / PARENT / PLAYER), `is_active` |
+| 2 (done) | `users` | email (stored lowercase, unique), Argon2 password hash (empty for parents who only use Google), role (COACH / PARENT / PLAYER), `is_active`, unique `google_sub` once the account has signed in with Google |
 | 2b (done) | `refresh_tokens` | SHA-256 hash of the token (unique), `family_id`, `expires_at`, `revoked_at`; deleted along with the user |
 | 3 (done) | `players` | first name, last name, date of birth; optional unique `user_id` for a player login later |
 | 3 (done) | `parent_players` | primary key `(parent_id, player_id)`; the parent who adds a player is linked automatically; a player can have more than one parent |
@@ -174,6 +174,7 @@ player login (users) ── players   (optional, players.user_id)
   * If a refresh response never reaches the browser (for example, the connection drops), the browser keeps the old cookie. The next refresh then looks like reuse and the user has to log in again.
   * Old token rows aren't cleaned up yet. That's fine at this size, and a cleanup job can be added later.
 * **Accounts:** only parents can sign up publicly. Coaches are created with `scripts/create_coach.py`, and player logins are added later by a parent.
+* **Sign in with Google** (parents only): an OpenID Connect authorization code flow with PKCE, run by the backend. A Google account signs in to the account it used before (`users.google_sub`), links to an existing parent with the same verified email, or creates a new parent without a password. Coaches can't use it. It ends by setting the same refresh cookie as a password login. It's off unless `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_REDIRECT_URI` are set. The details and the Google Cloud setup are in [google-login.md](google-login.md).
 
 ## 7. Authorisation (done in Phases 2 to 5)
 
@@ -200,6 +201,9 @@ If a user asks for something they aren't allowed to see, the API returns `404` s
 | POST | `/api/v1/auth/login` | `{"access_token", "token_type", "expires_in"}` and the refresh cookie, or `401` / `429` |
 | POST | `/api/v1/auth/refresh` | A new access token and refresh cookie, or `401 INVALID_REFRESH_TOKEN` (and the cookie is cleared) |
 | POST | `/api/v1/auth/logout` | Revokes the refresh token and clears the cookie. Always `204` |
+| GET | `/api/v1/auth/options` | `{"google": true}` when Google sign-in is turned on |
+| GET | `/api/v1/auth/google/start` | Redirects to Google, or to `/login?google_error=not_configured` |
+| GET | `/api/v1/auth/google/callback` | Where Google sends the browser back. Sets the refresh cookie and redirects to `/parent`, or to `/login?google_error=<code>` |
 | GET | `/api/v1/users/me` | The logged-in user, or `401` |
 | GET | `/api/v1/sports` | All sports. Any logged-in user |
 | GET, POST | `/api/v1/players` | Parents: list their players, or add one (`201`) |
