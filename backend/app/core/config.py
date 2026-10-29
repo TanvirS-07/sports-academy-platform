@@ -39,11 +39,22 @@ class Settings(BaseSettings):
     # which is the default for local development because Vite proxies /api requests.
     cors_origins: str = ""
 
+    # "Sign in with Google" for parents. It's turned off unless all three are set.
+    # The redirect URI must match one listed on the OAuth client in Google Cloud exactly,
+    # for example http://localhost:5173/api/v1/auth/google/callback.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = ""
+
     @model_validator(mode="after")
     def check_production_secret(self) -> "Settings":
         if self.app_env == "production" and self.jwt_secret in PUBLIC_JWT_SECRETS:
             raise ValueError("JWT_SECRET is an example value. Generate a new one for production.")
         return self
+
+    @property
+    def google_login_enabled(self) -> bool:
+        return all((self.google_client_id, self.google_client_secret, self.google_redirect_uri))
 
     @property
     def cors_origin_list(self) -> list[str]:
