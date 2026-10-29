@@ -28,10 +28,15 @@ export function loggedInAs(user: { role: string }): Record<string, Handler> {
 
 /**
  * Stubs fetch with one handler per "METHOD /api/v1/path".
- * Unless a test says otherwise, there's no refresh cookie, so the app starts logged out.
+ * Unless a test says otherwise, there's no refresh cookie, so the app starts logged out,
+ * and Google sign-in is turned off.
  */
 export function mockBackend(handlers: Record<string, Handler>) {
-  const allHandlers: Record<string, Handler> = { 'POST /api/v1/auth/refresh': noRefreshCookie, ...handlers }
+  const allHandlers: Record<string, Handler> = {
+    'POST /api/v1/auth/refresh': noRefreshCookie,
+    'GET /api/v1/auth/options': () => jsonResponse({ google: false }),
+    ...handlers,
+  }
   const fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
     const key = `${init.method ?? 'GET'} ${url}`
     const handler = allHandlers[key]
