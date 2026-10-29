@@ -15,17 +15,20 @@ def create_user(
     db: Session,
     *,
     email: str,
-    password: str,
+    password: str | None,
     first_name: str,
     last_name: str,
     role: Role,
+    google_sub: str | None = None,
 ) -> User:
     user = User(
         email=email.strip().lower(),
-        password_hash=hash_password(password),
+        # No password means the account can only sign in with Google.
+        password_hash=hash_password(password) if password is not None else None,
         first_name=first_name,
         last_name=last_name,
         role=role,
+        google_sub=google_sub,
     )
     db.add(user)
     try:
