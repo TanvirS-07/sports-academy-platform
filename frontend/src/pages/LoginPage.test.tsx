@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { setAccessToken } from '../lib/api'
-import { coachUser, firstCallTo, jsonResponse, mockBackend, parentUser, renderAt, tokenResponse } from '../test/utils'
+import { callsTo, coachUser, firstCallTo, jsonResponse, mockBackend, parentUser, renderAt, tokenResponse } from '../test/utils'
 import { LoginPage } from './LoginPage'
 
 function fillAndSubmit(email: string, password: string) {
@@ -75,5 +75,40 @@ describe('LoginPage', () => {
 
     expect(screen.getByLabelText('Email')).toHaveValue('coach@example.com')
     expect(screen.getByLabelText('Password')).toHaveValue('demo-password')
+  })
+
+  it('hides Google sign-in when the backend has it turned off', async () => {
+    const fetchMock = mockBackend({})
+
+    renderAt('/login', routes)
+
+    await vi.waitFor(() => expect(callsTo(fetchMock, 'GET /api/v1/auth/options')).toHaveLength(1))
+    expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument()
+  })
+
+  it('links to the backend to continue with Google', async () => {
+    mockBackend({ 'GET /api/v1/auth/options': () => jsonResponse({ google: true }) })
+
+    renderAt('/login', routes)
+
+    const link = await screen.findByRole('link', { name: 'Continue with Google' })
+    expect(link).toHaveAttribute('href', '/api/v1/auth/google/start')
+    expect(screen.getByText('For parents. Coaches log in with their email and password.')).toBeInTheDocument()
+  })
+
+  it('explains why Google sign-in was refused', () => {
+    mockBackend({})
+
+    renderAt('/login?google_error=coach_account', routes)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Coaches log in with their email and password.')
+  })
+
+  it('shows a general message for an unknown Google error', () => {
+    mockBackend({})
+
+    renderAt('/login?google_error=something_new', routes)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Signing in with Google didn’t work. Please try again.')
   })
 })

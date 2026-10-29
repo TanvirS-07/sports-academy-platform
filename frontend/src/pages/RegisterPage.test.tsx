@@ -64,4 +64,13 @@ describe('RegisterPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('already exists')
   })
+
+  it('offers to continue with Google instead', async () => {
+    mockBackend({ 'GET /api/v1/auth/options': () => jsonResponse({ google: true }) })
+
+    renderAt('/register', routes)
+
+    const link = await screen.findByRole('link', { name: 'Continue with Google' })
+    expect(link).toHaveAttribute('href', '/api/v1/auth/google/start')
+  })
 })
