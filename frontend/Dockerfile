@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- base: pinned Node LTS ----------
-FROM node:24.21.0-bookworm-slim AS base
+FROM node:24.22.0-bookworm-slim AS base
 WORKDIR /app
 
 # ---------- dev: Vite dev server, source is bind-mounted by docker compose ----------
